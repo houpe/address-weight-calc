@@ -31,14 +31,14 @@ module.exports = async (req, res) => {
     if (result.code === 200 && result.data) {
       const d = result.data;
       segParts = {
-        provName: d.provName || '',
+        provName: d.provinceName || d.provName || '',
         cityName: d.cityName || '',
         countyName: d.countyName || '',
         townName: d.townName || '',
         detailAddress: d.masterAdr || d.detailAddress || ''
       };
       const parts = [];
-      for (const key of ['provName', 'cityName', 'countyName', 'townName', 'masterAdr', 'detailAddress']) {
+      for (const key of ['provinceName', 'cityName', 'countyName', 'townName', 'masterAdr', 'detailAddress']) {
         if (d[key]) parts.push(d[key]);
       }
       formatted = parts.join('') || cleanAddr;
