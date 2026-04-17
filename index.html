@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>地址坐标可靠度计算器</title>
+  <style>
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --surface2: #334155; --border: #475569;
+      --text: #f1f5f9; --text-dim: #94a3b8; --accent: #38bdf8;
+      --green: #4ade80; --yellow: #facc15; --red: #f87171;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, 'SF Pro', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg); color: var(--text); padding: 16px;
+    }
+    .container { height: 100%; display: flex; flex-direction: column; gap: 12px; }
+    .header { display: flex; align-items: baseline; gap: 12px; flex-shrink: 0; }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .header .sub { font-size: 12px; color: var(--text-dim); }
+    .main { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .col-input { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+    .col-result { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+    .col-map { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .card-title {
+      font-size: 11px; font-weight: 600; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .method-selector { display: flex; gap: 6px; }
+    .method-btn {
+      flex: 1; padding: 8px 8px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg); color: var(--text-dim); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; text-align: center; line-height: 1.3;
+    }
+    .method-btn:hover { border-color: var(--accent); color: var(--text); }
+    .method-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .method-btn .desc { font-size: 10px; font-weight: 400; display: block; opacity: 0.8; }
+    textarea {
+      width: 100%; flex: 1; min-height: 0; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 11px; padding: 8px; resize: none; outline: none;
+    }
+    textarea:focus { border-color: var(--accent); }
+    .hint { font-size: 10px; color: var(--text-dim); line-height: 1.5; }
+    .hint code { background: var(--surface2); padding: 1px 4px; border-radius: 3px; font-size: 9px; }
+    .params-row { display: flex; gap: 8px; }
+    .param-item { flex: 1; }
+    .param-item label { display: block; font-size: 10px; color: var(--text-dim); margin-bottom: 2px; }
+    .param-item input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); padding: 6px 8px; font-size: 11px; outline: none;
+    }
+    .param-item input:focus { border-color: var(--accent); }
+    .actions { display: flex; gap: 6px; }
+    .btn {
+      padding: 8px 14px; border: none; border-radius: 6px; font-size: 12px;
+      font-weight: 600; cursor: pointer; transition: all 0.15s; flex: 1; text-align: center;
+    }
+    .btn-primary { background: var(--accent); color: var(--bg); }
+    .btn-primary:hover { background: #7dd3fc; }
+    .btn-secondary { background: var(--surface2); color: var(--text); }
+    .btn-secondary:hover { background: var(--border); }
+
+    .result-panel { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .score-ring { width: 110px; height: 110px; }
+    .score-ring .track { fill: none; stroke: var(--surface2); stroke-width: 10; }
+    .score-ring .fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+    .score-value { font-size: 22px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+    .score-label { font-size: 10px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central; }
+    .score-verdict { font-size: 12px; padding: 4px 12px; border-radius: 12px; font-weight: 600; }
+    .verdict-high { background: rgba(74,222,128,0.15); color: var(--green); }
+    .verdict-mid { background: rgba(250,204,21,0.15); color: var(--yellow); }
+    .verdict-low { background: rgba(248,113,113,0.15); color: var(--red); }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+    .info-item { background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+    .info-item .label { font-size: 9px; color: var(--text-dim); margin-bottom: 2px; }
+    .info-item .value { font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace; }
+    .center-loc {
+      width: 100%; background: var(--bg); border-radius: 6px; padding: 8px;
+      font-family: 'SF Mono', monospace; font-size: 12px; text-align: center; color: var(--accent);
+    }
+    .method-badge { font-size: 10px; color: var(--text-dim); background: var(--surface2); padding: 3px 8px; border-radius: 4px; }
+    .source-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .source-table th { text-align: left; padding: 5px 6px; background: var(--surface2); color: var(--text-dim); font-weight: 600; font-size: 9px; text-transform: uppercase; }
+    .source-table th:first-child { border-radius: 4px 0 0 4px; }
+    .source-table th:last-child { border-radius: 0 4px 4px 0; }
+    .source-table td { padding: 5px 6px; border-bottom: 1px solid var(--surface2); font-family: 'SF Mono', monospace; font-size: 10px; }
+    .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+    .tag-valid { background: rgba(74,222,128,0.15); color: var(--green); }
+    .tag-dropped { background: rgba(248,113,113,0.15); color: var(--red); }
+    .empty-state { text-align: center; padding: 30px 10px; color: var(--text-dim); }
+    .empty-state .icon { font-size: 28px; margin-bottom: 8px; }
+    .empty-state .text { font-size: 12px; }
+
+    #map { flex: 1; min-height: 0; width: 100%; }
+    .map-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--surface);
+      flex-shrink: 0;
+    }
+    .map-header .card-title { margin: 0; }
+    .map-toggle {
+      font-size: 10px; color: var(--text-dim); background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .map-toggle:hover { border-color: var(--accent); color: var(--text); }
+    .map-toggle.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .map-container { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .map-container.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>地址坐标可靠度计算器</h1>
+      <span class="sub">多源坐标融合 · 加权质心 · 综合置信度</span>
+    </div>
+
+    <div class="main">
+      <div class="col-input">
+        <div class="card" style="flex:1;">
+          <div class="card-title">计算方法</div>
+          <div class="method-selector">
+            <button class="method-btn active" id="method-5" onclick="setMethod('5coord')">5坐标<span class="desc">全源加权</span></button>
+            <button class="method-btn" id="method-2" onclick="setMethod('2coord')">2坐标<span class="desc">三通 GEO</span></button>
+          </div>
+          <div class="card-title">输入坐标</div>
+          <textarea id="input"></textarea>
+          <div class="hint">
+            格式：<code>来源 经度,纬度</code>（Tab/空格分隔）<br>
+            <span id="hint-sources"></span>
+          </div>
+          <div class="params-row">
+            <div class="param-item">
+              <label>tau (米)</label>
+              <input id="tau" type="number" value="500" min="50" max="5000" step="50">
+            </div>
+            <div class="param-item">
+              <label>离群阈值 (米)</label>
+              <input id="outlier" type="number" value="5000" min="500" max="50000" step="500">
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="calculate()">计算</button>
+            <button class="btn btn-secondary" onclick="loadDefault()">默认</button>
+            <button class="btn btn-secondary" onclick="clearAll()">清空</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-result">
+        <div class="card" style="flex:1;">
+          <div class="card-title">计算结果</div>
+          <div id="result-content">
+            <div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>
+          </div>
+        </div>
+        <div class="card" style="flex:1; min-height: 0;">
+          <div class="card-title">来源明细</div>
+          <div id="source-detail" style="overflow-y:auto; flex:1; min-height:0;">
+            <div class="empty-state"><div class="text">暂无数据</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-map">
+        <div class="card map-container" id="map-section">
+          <div class="map-header">
+            <div class="card-title">坐标分布地图</div>
+            <button class="map-toggle active" id="map-toggle" onclick="toggleMap()">隐藏</button>
+          </div>
+          <div id="map"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const AMAP_KEY = 'ca242a6c6d25a9f4b76c5349c2e1897d';
+    let currentMethod = '5coord';
+    let mapInstance = null, mapMarkers = [], mapVisible = true, amapLoaded = false;
+    let lastResult = null, lastParsers = [];
+
+    const METHOD_CONFIG = {
+      '5coord': {
+        label: '5坐标（全源加权）',
+        sources: ['zt_pro','amap_poi','baidu_poi','tian_poi','amap_geo','baidu_geo','tian_geo','manual'],
+        weights: {'zt_pro':4,'amap_poi':3,'baidu_poi':3,'tian_poi':3,'amap_geo':2,'baidu_geo':2,'tian_geo':2,'manual':3}
+      },
+      '2coord': {
+        label: '2坐标（三通GEO）',
+        sources: ['zt_pro','amap_geo','baidu_geo','manual'],
+        weights: {'zt_pro':4,'amap_geo':2,'baidu_geo':2,'manual':3}
+      }
+    };
+
+    const SOURCE_MAP = {
+      '中通':'zt_pro','中通pro':'zt_pro','中通_pro':'zt_pro','中通PRO':'zt_pro',
+      '高德poi':'amap_poi','高德POI':'amap_poi','23系统':'amap_poi',
+      '百度poi':'baidu_poi','百度POI':'baidu_poi','24系统':'baidu_poi',
+      '天地图poi':'tian_poi','天地图POI':'tian_poi',
+      '高德geo':'amap_geo','高德GEO':'amap_geo','高德':'amap_geo',
+      '百度geo':'baidu_geo','百度GEO':'baidu_geo','百度':'baidu_geo',
+      '天地图geo':'tian_geo','天地图GEO':'tian_geo',
+      '手选':'manual','manual':'manual',
+    };
+
+    const SOURCE_ABBREV = {'zt_pro':'中','amap_poi':'高','baidu_poi':'百','tian_poi':'天','amap_geo':'高','baidu_geo':'百','tian_geo':'天','manual':'手'};
+    const SOURCE_COLORS = {'zt_pro':'#8b5cf6','amap_poi':'#38bdf8','baidu_poi':'#f97316','tian_poi':'#a78bfa','amap_geo':'#0ea5e9','baidu_geo':'#fb923c','tian_geo':'#c084fc','manual':'#ec4899'};
+    const SOURCE_LABELS = {'zt_pro':'中通PRO','amap_poi':'高德POI','baidu_poi':'百度POI','tian_poi':'天地图POI','amap_geo':'高德GEO','baidu_geo':'百度GEO','tian_geo':'天地图GEO','manual':'手选'};
+
+    function toRadians(d) { return d * Math.PI / 180; }
+    function haversineDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371000, phi1 = toRadians(lat1), phi2 = toRadians(lat2);
+      const dPhi = toRadians(lat2-lat1), dLambda = toRadians(lng2-lng1);
+      const a = Math.sin(dPhi/2)**2 + Math.cos(phi1)*Math.cos(phi2)*Math.sin(dLambda/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function setMethod(m) {
+      currentMethod = m;
+      document.getElementById('method-5').classList.toggle('active', m==='5coord');
+      document.getElementById('method-2').classList.toggle('active', m==='2coord');
+      const cfg = METHOD_CONFIG[m];
+      const lm = {'zt_pro':'中通_PRO','amap_poi':'高德poi/23系统','baidu_poi':'百度poi/24系统','tian_poi':'天地图poi','amap_geo':'高德GEO','baidu_geo':'百度GEO','tian_geo':'天地图GEO','manual':'手选'};
+      document.getElementById('hint-sources').textContent = '支持: ' + cfg.sources.map(s=>lm[s]||s).join('/');
+    }
+
+    function getMethodConfig() { return METHOD_CONFIG[currentMethod]; }
+
+    function normalizeSource(name) {
+      const key = name.trim().toLowerCase();
+      for (const [match, source] of Object.entries(SOURCE_MAP)) {
+        if (key === match.toLowerCase() || key.includes(match.toLowerCase())) return source;
+      }
+      return null;
+    }
+
+    function parseInput(text) {
+      const cfg = getMethodConfig();
+      const lines = text.trim().split('\n').filter(l => l.trim());
+      const parsers = [], seen = new Set();
+      for (const line of lines) {
+        let parts;
+        if (line.includes('\t')) parts = line.split('\t').map(s=>s.trim());
+        else if (line.includes(' ')) { const idx = line.search(/[\d-]/); if(idx>0) parts=[line.slice(0,idx).trim(),line.slice(idx).trim()]; else continue; }
+        else continue;
+        if (parts.length < 2) continue;
+        const source = normalizeSource(parts[0]);
+        if (!source || !cfg.sources.includes(source) || seen.has(source)) continue;
+        const cp = parts[1].split(/[,，\s]+/).filter(Boolean);
+        if (cp.length < 2) continue;
+        const lng = parseFloat(cp[0]), lat = parseFloat(cp[1]);
+        if (isNaN(lng)||isNaN(lat)) continue;
+        seen.add(source);
+        parsers.push({source, lat, lng, weight: cfg.weights[source]||2});
+      }
+      return parsers;
+    }
+
+    function calculateReliability(parsers, tau, outlierDist) {
+      if (!parsers.length) return {score:0,msg:'无有效解析数据'};
+      if (parsers.length===1) { const p=parsers[0]; return {score:1,deviation:0,centerLat:p.lat,centerLng:p.lng,validSources:[{source:p.source,weightRatio:1,dist:0}],dropped:[],msg:'仅一个有效源'}; }
+      const valid=[], dropped=[];
+      for (let i=0;i<parsers.length;i++) {
+        let minDist=Infinity;
+        for (let j=0;j<parsers.length;j++) { if(i===j)continue; const d=haversineDistance(parsers[i].lat,parsers[i].lng,parsers[j].lat,parsers[j].lng); if(d<minDist)minDist=d; }
+        if(minDist<=outlierDist) valid.push(parsers[i]); else dropped.push(parsers[i].source);
+      }
+      if(!valid.length) return {score:0,msg:'所有坐标严重发散',dropped,validSources:[]};
+      const tw=valid.reduce((s,p)=>s+p.weight,0);
+      if(tw===0) return {score:0,msg:'权重总和为0'};
+      for(const p of valid) p.normalizedWeight=p.weight/tw;
+      const centerLat=valid.reduce((s,p)=>s+p.lat*p.normalizedWeight,0);
+      const centerLng=valid.reduce((s,p)=>s+p.lng*p.normalizedWeight,0);
+      let deviation=0; const details=[];
+      for(const p of valid) { const d=haversineDistance(p.lat,p.lng,centerLat,centerLng); deviation+=p.normalizedWeight*d; details.push({source:p.source,weightRatio:p.normalizedWeight,dist:d}); }
+      const score=Math.exp(-deviation/tau);
+      return {score:Math.round(score*10000)/10000, deviation:Math.round(deviation*100)/100, centerLat:Math.round(centerLat*1e6)/1e6, centerLng:Math.round(centerLng*1e6)/1e6, validSources:details, dropped, msg:''};
+    }
+
+    function getScoreColor(s) { return s>=0.85?'var(--green)':s>=0.60?'var(--yellow)':'var(--red)'; }
+    function getVerdict(s) { return s>=0.85?{text:'高度一致',cls:'verdict-high'}:s>=0.60?{text:'合理误差',cls:'verdict-mid'}:{text:'不可靠·人工复核',cls:'verdict-low'}; }
+
+    function renderResult(result) {
+      const card=document.getElementById('result-content'), detailCard=document.getElementById('source-detail');
+      if(result.score===0&&result.msg) { card.innerHTML=`<div class="empty-state"><div class="icon">&#9888;</div><div class="text">${result.msg}</div></div>`; detailCard.innerHTML=`<div class="empty-state"><div class="text">无数据</div></div>`; return; }
+      const circ=2*Math.PI*54, offset=circ*(1-result.score), color=getScoreColor(result.score), verdict=getVerdict(result.score);
+      card.innerHTML=`
+        <div class="result-panel">
+          <div class="method-badge">${getMethodConfig().label}</div>
+          <div class="score-ring"><svg viewBox="0 0 120 120" width="110" height="110">
+            <g transform="rotate(-90 60 60)"><circle class="track" cx="60" cy="60" r="54"/><circle class="fill" cx="60" cy="60" r="54" stroke="${color}" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/></g>
+            <text class="score-value" x="60" y="52" fill="${color}">${(result.score*100).toFixed(1)}%</text>
+            <text class="score-label" x="60" y="72">可靠度</text>
+          </svg></div>
+          <div class="score-verdict ${verdict.cls}">${verdict.text}</div>
+          <div class="info-grid">
+            <div class="info-item"><div class="label">加权偏差</div><div class="value">${result.deviation} m</div></div>
+            <div class="info-item"><div class="label">有效/剔除</div><div class="value">${result.validSources.length} / ${result.dropped.length}</div></div>
+          </div>
+          <div class="center-loc">质心: ${result.centerLng}, ${result.centerLat}</div>
+        </div>`;
+      let html=`<table class="source-table"><thead><tr><th>来源</th><th>权重</th><th>距质心</th><th>状态</th></tr></thead><tbody>`;
+      for(const s of result.validSources) html+=`<tr><td>${SOURCE_LABELS[s.source]||s.source}</td><td>${(s.weightRatio*100).toFixed(1)}%</td><td>${s.dist.toFixed(1)}m</td><td><span class="tag tag-valid">有效</span></td></tr>`;
+      for(const s of result.dropped) html+=`<tr><td>${SOURCE_LABELS[s]||s}</td><td>-</td><td>-</td><td><span class="tag tag-dropped">离群</span></td></tr>`;
+      html+=`</tbody></table>`;
+      detailCard.innerHTML=html;
+    }
+
+    function loadAMap() {
+      return new Promise((resolve,reject)=>{
+        if(amapLoaded){resolve();return;}
+        const script=document.createElement('script');
+        script.src=`https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Marker,AMap.InfoWindow`;
+        script.onload=()=>{amapLoaded=true;resolve();};
+        script.onerror=()=>reject(new Error('地图加载失败'));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function initMap() {
+      if(mapInstance)return;
+      try { await loadAMap();
+        mapInstance=new AMap.Map('map',{zoom:14,center:[121.48,31.22],mapStyle:'amap://styles/dark',features:['bg','road','building','point']});
+      }catch(e){document.getElementById('map').innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;">&#9888; ${e.message}</div>`;}
+    }
+
+    function renderMap(result,parsers) {
+      if(!result.validSources||!result.validSources.length)return;
+      lastResult=result; lastParsers=parsers;
+      if(!mapInstance) initMap().then(()=>drawMapMarkers(result,parsers));
+      else drawMapMarkers(result,parsers);
+    }
+
+    function drawMapMarkers(result,parsers) {
+      if(!mapInstance)return;
+      for(const m of mapMarkers)mapInstance.remove(m);
+      mapMarkers=[];
+      const allPoints=[];
+      for(const s of result.validSources){
+        const p=parsers.find(x=>x.source===s.source); if(!p)continue;
+        allPoints.push([p.lng,p.lat]);
+        const color=SOURCE_COLORS[s.source]||'#4ade80', abbrev=SOURCE_ABBREV[s.source]||s.source;
+        const marker=new AMap.Marker({position:[p.lng,p.lat],
+          content:`<div style="width:26px;height:26px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);position:relative;cursor:pointer;">${abbrev}<div style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid ${color};"></div></div>`,
+          offset:new AMap.Pixel(-13,-13)});
+        marker.setMap(mapInstance); mapMarkers.push(marker);
+        const info=new AMap.InfoWindow({content:`<div style="padding:6px;font-size:12px;line-height:1.7"><strong>${SOURCE_LABELS[s.source]||s.source}</strong><br><span style="color:#94a3b8">${p.lng}, ${p.lat}</span><br>权重:${(s.weightRatio*100).toFixed(1)}% 距质心:${s.dist.toFixed(1)}m</div>`,offset:new AMap.Pixel(0,-13)});
+        marker.on('click',()=>info.open(mapInstance,[p.lng,p.lat]));
+      }
+      for(const s of result.dropped){
+        const p=parsers.find(x=>x.source===s); if(!p)continue;
+        allPoints.push([p.lng,p.lat]);
+        const marker=new AMap.Marker({position:[p.lng,p.lat],
+          content:`<div style="width:26px;height:26px;border-radius:50%;background:#f87171;opacity:0.5;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;border:2px solid #fff;position:relative;cursor:pointer;">${SOURCE_ABBREV[s]||s}<div style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid #f87171;"></div></div>`,
+          offset:new AMap.Pixel(-13,-13),opacity:0.6});
+        marker.setMap(mapInstance); mapMarkers.push(marker);
+      }
+      if(result.centerLat&&result.centerLng){
+        const cm=new AMap.Marker({position:[result.centerLng,result.centerLat],
+          content:`<div style="width:36px;height:36px;border-radius:50%;background:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;border:3px solid #fff;box-shadow:0 0 0 4px rgba(56,189,248,0.3);">&#9733;</div>`,
+          offset:new AMap.Pixel(-18,-18),zIndex:100});
+        cm.setMap(mapInstance); mapMarkers.push(cm);
+      }
+      if(allPoints.length>0) mapInstance.setFitView(mapMarkers,false,[30,30,30,30]);
+    }
+
+    function toggleMap() {
+      mapVisible=!mapVisible;
+      document.getElementById('map-section').classList.toggle('hidden',!mapVisible);
+      const btn=document.getElementById('map-toggle');
+      btn.textContent=mapVisible?'隐藏':'显示';
+      btn.classList.toggle('active',mapVisible);
+      if(mapVisible&&mapInstance) setTimeout(()=>mapInstance.resize(),100);
+    }
+
+    function calculate() {
+      const text=document.getElementById('input').value;
+      const tau=parseFloat(document.getElementById('tau').value)||500;
+      const outlier=parseFloat(document.getElementById('outlier').value)||5000;
+      const parsers=parseInput(text);
+      const result=calculateReliability(parsers,tau,outlier);
+      renderResult(result);
+      renderMap(result,parsers);
+    }
+
+    function loadDefault() {
+      document.getElementById('input').value=`23系统\t121.50868589535285,38.84132130739873
+24系统\t121.5088580443412,38.840767298298786
+百度GEO\t121.5088580443412,38.840767298298786
+高德GEO\t121.508818,38.840953
+中通_PRO\t121.50868589535285,38.84132130739873
+手选\t121.50868589535285,38.84132130739873`;
+    }
+
+    function clearAll() {
+      document.getElementById('input').value='';
+      document.getElementById('result-content').innerHTML=`<div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>`;
+      document.getElementById('source-detail').innerHTML=`<div class="empty-state"><div class="text">暂无数据</div></div>`;
+    }
+
+    document.getElementById('input').addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter')calculate();});
+    window.addEventListener('resize',()=>{if(mapVisible&&mapInstance)mapInstance.resize();});
+
+    setMethod('5coord');
+    loadDefault();
+    calculate();
+  </script>
+</body>
+</html>
