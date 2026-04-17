@@ -228,7 +228,7 @@
     let currentMode = 'coord';
     let currentMethod = '5coord';
     let mapInstance = null, mapMarkers = [], mapVisible = true, amapLoaded = false;
-    let lastResult = null, lastParsers = [];
+    let lastResult = null, lastParsers = [], lastFormatted = '', lastRawData = {};
 
     const METHOD_CONFIG = {
       '5coord': {
@@ -352,8 +352,6 @@
 
     function getScoreColor(s) { return s>=0.85?'var(--green)':s>=0.60?'var(--yellow)':'var(--red)'; }
     function getVerdict(s) { return s>=0.85?{text:'高度一致',cls:'verdict-high'}:s>=0.60?{text:'合理误差',cls:'verdict-mid'}:{text:'不可靠·人工复核',cls:'verdict-low'}; }
-
-    let lastResult = null, lastParsers = [], lastFormatted = '', lastRawData = {};
 
     function renderResult(result) {
       const card=document.getElementById('result-content'), detailCard=document.getElementById('source-detail');
