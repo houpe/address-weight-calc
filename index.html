@@ -353,6 +353,8 @@
     function getScoreColor(s) { return s>=0.85?'var(--green)':s>=0.60?'var(--yellow)':'var(--red)'; }
     function getVerdict(s) { return s>=0.85?{text:'高度一致',cls:'verdict-high'}:s>=0.60?{text:'合理误差',cls:'verdict-mid'}:{text:'不可靠·人工复核',cls:'verdict-low'}; }
 
+    let lastResult = null, lastParsers = [], lastFormatted = '', lastRawData = {};
+
     function renderResult(result) {
       const card=document.getElementById('result-content'), detailCard=document.getElementById('source-detail');
       if(result.score===0&&result.msg) { card.innerHTML=`<div class="empty-state"><div class="icon">&#9888;</div><div class="text">${result.msg}</div></div>`; detailCard.innerHTML=`<div class="empty-state"><div class="text">无数据</div></div>`; return; }
@@ -361,6 +363,7 @@
       card.innerHTML=`
         <div class="result-panel">
           <div class="method-badge">${label}</div>
+          ${lastFormatted ? `<div class="center-loc" style="font-size:10px;padding:4px 8px;line-height:1.4">分词地址<br><span style="font-size:11px;color:var(--text)">${lastFormatted}</span></div>` : ''}
           <div class="score-ring"><svg viewBox="0 0 120 120" width="100" height="100">
             <g transform="rotate(-90 60 60)"><circle class="track" cx="60" cy="60" r="54"/><circle class="fill" cx="60" cy="60" r="54" stroke="${color}" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/></g>
             <text class="score-value" x="60" y="52" fill="${color}">${(result.score*100).toFixed(1)}%</text>
@@ -377,6 +380,49 @@
       for(const s of result.validSources) html+=`<tr><td>${SOURCE_LABELS[s.source]||s.source}</td><td>${(s.weightRatio*100).toFixed(1)}%</td><td>${s.dist.toFixed(1)}m</td><td><span class="tag tag-valid">有效</span></td></tr>`;
       for(const s of result.dropped) html+=`<tr><td>${SOURCE_LABELS[s]||s}</td><td>-</td><td>-</td><td><span class="tag tag-dropped">离群</span></td></tr>`;
       html+=`</tbody></table>`;
+
+      // Address mode: show detailed parsing results
+      if (currentMode === 'address' && lastRawData && Object.keys(lastRawData).length > 0) {
+        html += `<div style="margin-top:10px"><div class="card-title" style="margin-bottom:6px">解析详情</div>`;
+        // 中通 PRO details
+        const zt = lastRawData.zt_pro;
+        if (zt && !zt.error) {
+          html += `<div style="background:var(--bg);border-radius:6px;padding:8px;margin-bottom:6px;font-size:10px;line-height:1.6">
+            <div style="color:#8b5cf6;font-weight:600;margin-bottom:2px">中通 PRO</div>
+            <div>名称: ${zt.raw?.name || '-'}</div>
+            <div>省/市/区: ${zt.raw?.province || '-'} / ${zt.raw?.city || '-'} / ${zt.raw?.county || '-'}</div>
+            <div>乡镇/街道: ${zt.raw?.town || '-'}</div>
+            <div>坐标: ${zt.lng}, ${zt.lat}</div>
+          </div>`;
+        }
+        // 高德 GEO details
+        const amap = lastRawData.amap_geo;
+        if (amap && !amap.error) {
+          html += `<div style="background:var(--bg);border-radius:6px;padding:8px;margin-bottom:6px;font-size:10px;line-height:1.6">
+            <div style="color:#38bdf8;font-weight:600;margin-bottom:2px">高德 GEO</div>
+            <div>省/市/区: ${amap.raw?.province || '-'} / ${amap.raw?.city || '-'} / ${amap.raw?.district || '-'}</div>
+            <div>街道: ${amap.raw?.street || '-'}</div>
+            <div>门牌: ${amap.raw?.number || '-'}</div>
+            <div>级别: ${amap.raw?.level || '-'}</div>
+            <div>坐标: ${amap.lng}, ${amap.lat}</div>
+          </div>`;
+        }
+        // 百度 GEO details
+        const baidu = lastRawData.baidu_geo;
+        if (baidu && !baidu.error) {
+          html += `<div style="background:var(--bg);border-radius:6px;padding:8px;margin-bottom:6px;font-size:10px;line-height:1.6">
+            <div style="color:#fb923c;font-weight:600;margin-bottom:2px">百度 GEO</div>
+            <div>理解度: ${baidu.raw?.comprehension || '-'}</div>
+            <div>精度: ${baidu.raw?.confidence || '-'}</div>
+            <div>级别: ${baidu.raw?.level || '-'}</div>
+            <div>省份/城市/区县: ${baidu.raw?.province || '-'} / ${baidu.raw?.city || '-'} / ${baidu.raw?.district || '-'}</div>
+            <div>街道: ${baidu.raw?.street || '-'}</div>
+            <div>坐标: ${baidu.lng}, ${baidu.lat}</div>
+          </div>`;
+        }
+        html += `</div>`;
+      }
+
       detailCard.innerHTML=html;
     }
 
@@ -457,6 +503,7 @@
         if (!address) { alert('请输入地址'); return; }
         btn.disabled = true; btn.textContent = '解析中';
         document.getElementById('result-content').innerHTML = '<div class="loading">正在解析地址</div>';
+        document.getElementById('source-detail').innerHTML = '';
 
         try {
           // Step 1: Standardize
@@ -466,6 +513,7 @@
           });
           const stdData = await stdResp.json();
           const formatted = stdData.formatted;
+          lastFormatted = formatted;
           document.getElementById('formatted-display').textContent = formatted;
 
           // Step 2-4: Parse with 3 sources
@@ -474,6 +522,7 @@
             body: JSON.stringify({ formatted })
           });
           const parseData = await parseResp.json();
+          lastRawData = parseData.parsers;
 
           // Build parsers array
           const parsers = [];
@@ -491,6 +540,9 @@
         }
         btn.disabled = false; btn.textContent = '计算';
       } else {
+        lastFormatted = '';
+        lastRawData = {};
+        document.getElementById('formatted-display').textContent = '-';
         const text = document.getElementById('input-coords').value;
         const parsers = parseInput(text);
         const result = calculateReliability(parsers, tau, outlier);
@@ -508,7 +560,7 @@
 中通_PRO\t121.50868589535285,38.84132130739873
 手选\t121.50868589535285,38.84132130739873`;
       } else {
-        document.getElementById('input-address').value = '广东省深圳市宝安区鹤州路38号';
+        document.getElementById('input-address').value = '山西省晋中市太谷区水秀乡科创路一号山';
       }
     }
 

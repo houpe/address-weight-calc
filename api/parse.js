@@ -30,7 +30,19 @@ module.exports = async (req, res) => {
         const parts = data.data.geom.split(',');
         if (parts.length === 2) { lng = parseFloat(parts[0]); lat = parseFloat(parts[1]); }
       }
-      if (lat !== 0 && lng !== 0) results.zt_pro = { lat, lng, raw: data.data };
+      if (lat !== 0 && lng !== 0) {
+        results.zt_pro = {
+          lat, lng,
+          raw: {
+            name: data.data.name || '',
+            province: data.data.province || data.data.provName || '',
+            city: data.data.city || data.data.cityName || '',
+            county: data.data.county || data.data.countyName || '',
+            town: data.data.town || data.data.townName || '',
+            level: data.data.level || ''
+          }
+        };
+      }
     }
   } catch (e) { results.zt_pro = { error: e.message }; }
 
@@ -41,19 +53,46 @@ module.exports = async (req, res) => {
     });
     const data = resp.data;
     if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
-      const loc = data.geocodes[0].location.split(',');
-      if (loc.length === 2) results.amap_geo = { lat: parseFloat(loc[1]), lng: parseFloat(loc[0]), raw: data.geocodes[0] };
+      const gc = data.geocodes[0];
+      const loc = gc.location.split(',');
+      if (loc.length === 2) {
+        results.amap_geo = {
+          lat: parseFloat(loc[1]), lng: parseFloat(loc[0]),
+          raw: {
+            province: gc.province || '',
+            city: gc.city || '',
+            district: gc.district || '',
+            street: gc.street || '',
+            number: gc.number || '',
+            level: gc.level || ''
+          }
+        };
+      }
     }
   } catch (e) { results.amap_geo = { error: e.message }; }
 
   // 3. 百度 GEO (返回GCJ02坐标)
   try {
     const resp = await axios.get('https://api.map.baidu.com/geocoding/v3/', {
-      params: { address: formatted, ak: BAIDU_AK, ret_coordtype: 'gcj02ll', output: 'json' }, timeout: 10000
+      params: { address: formatted, ak: BAIDU_AK, ret_coordtype: 'gcj02ll', output: 'json', extension_poi_infos: 'true' }, timeout: 10000
     });
     const data = resp.data;
     if (data.status === 0 && data.result && data.result.location) {
-      results.baidu_geo = { lat: parseFloat(data.result.location.lat || 0), lng: parseFloat(data.result.location.lng || 0), raw: data.result };
+      const r = data.result;
+      results.baidu_geo = {
+        lat: parseFloat(r.location.lat || 0), lng: parseFloat(r.location.lng || 0),
+        raw: {
+          comprehension: r.comprehension || r.result?.comprehension || '',
+          confidence: r.confidence || r.result?.confidence || '',
+          level: r.level || r.result?.level || '',
+          province: r.province || r.result?.province || '',
+          city: r.city || r.result?.city || '',
+          district: r.district || r.result?.district || '',
+          town: r.town || r.result?.town || '',
+          street: r.street || r.result?.street || '',
+          formatted_address: r.formatted_address || r.result?.formatted_address || ''
+        }
+      };
     }
   } catch (e) { results.baidu_geo = { error: e.message }; }
 

@@ -27,16 +27,24 @@ module.exports = async (req, res) => {
     });
     const result = resp.data;
     let formatted = '';
+    let segParts = {};
     if (result.code === 200 && result.data) {
       const d = result.data;
+      segParts = {
+        provName: d.provName || '',
+        cityName: d.cityName || '',
+        countyName: d.countyName || '',
+        townName: d.townName || '',
+        detailAddress: d.masterAdr || d.detailAddress || ''
+      };
       const parts = [];
-      for (const key of ['provName', 'cityName', 'countyName', 'townName', 'detailAddress']) {
+      for (const key of ['provName', 'cityName', 'countyName', 'townName', 'masterAdr', 'detailAddress']) {
         if (d[key]) parts.push(d[key]);
       }
       formatted = parts.join('') || cleanAddr;
     }
-    res.status(200).json({ formatted: formatted || cleanAddr, raw: result });
+    res.status(200).json({ formatted: formatted || cleanAddr, segments: segParts, raw: result });
   } catch (e) {
-    res.status(200).json({ formatted: cleanAddr, error: e.message });
+    res.status(200).json({ formatted: cleanAddr, segments: {}, error: e.message });
   }
 };
