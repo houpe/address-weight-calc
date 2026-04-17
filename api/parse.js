@@ -1,8 +1,27 @@
 const axios = require('axios');
 
 const ZT_API_BASE = 'https://zmap-openapi.gw.zt-express.com';
-const AMAP_KEY = '2196ccf544e7a8c8f82cff1e40be3992';
+const AMAP_KEYS = ['2196ccf544e7a8c8f82cff1e40be3992', '113c46ebcb860653b696ca01ec5ad151'];
 const BAIDU_AK = 'HIM3QorvOGqquDRvLSZ1npMH9lplzcLK';
+
+async function amapGeocode(address) {
+  for (const key of AMAP_KEYS) {
+    try {
+      const resp = await axios.get('https://restapi.amap.com/v3/geocode/geo', {
+        params: { key, address }, timeout: 10000
+      });
+      const data = resp.data;
+      if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
+        return data;
+      }
+      if (data.info === 'USER_DAILY_QUERY_OVER_LIMIT') continue;
+      return data;
+    } catch (e) {
+      if (AMAP_KEYS.indexOf(key) === AMAP_KEYS.length - 1) throw e;
+    }
+  }
+  return { status: '0', info: 'ALL_KEYS_EXHAUSTED' };
+}
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -48,10 +67,7 @@ module.exports = async (req, res) => {
 
   // 2. 高德 GEO
   try {
-    const resp = await axios.get('https://restapi.amap.com/v3/geocode/geo', {
-      params: { key: AMAP_KEY, address: formatted }, timeout: 10000
-    });
-    const data = resp.data;
+    const data = await amapGeocode(formatted);
     if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
       const gc = data.geocodes[0];
       const loc = gc.location.split(',');
