@@ -223,7 +223,7 @@
 
   <script>
     const AMAP_KEY = 'ca242a6c6d25a9f4b76c5349c2e1897d';
-    const API_BASE = 'http://localhost:3001';
+    const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
 
     let currentMode = 'coord';
     let currentMethod = '5coord';
