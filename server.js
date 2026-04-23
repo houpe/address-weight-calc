@@ -55,7 +55,7 @@ const BAIDU_ANALYZER_AK = process.env.BAIDU_AK || 'HIM3QorvOGqquDRvLSZ1npMH9lplz
 
 // 集团解析配置 (从 .env 读取)
 const GROUP_API = {
-  url: process.env.GROUP_API_URL || 'https://japi-test.zto.com/zto.routetime.address.parsePoi',
+  url: process.env.GROUP_API_URL || 'https://japi.zto.com/zto.routetime.address.parsePoi',
   appKey: process.env.GROUP_APP_KEY || '8ceef4d83f892f5244f61',
   appSecret: process.env.GROUP_APP_SECRET || 'f867a4267704d9ba6b8927b4090fe3c6'
 };
