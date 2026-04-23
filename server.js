@@ -4,6 +4,16 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 const crypto = require('crypto');
+const Database = require('better-sqlite3');
+
+const db = new Database(path.join(__dirname, 'cache.db'));
+db.exec(`CREATE TABLE IF NOT EXISTS parse_cache (
+  address TEXT PRIMARY KEY,
+  std_data TEXT,
+  parse_data TEXT,
+  created_at INTEGER DEFAULT (strftime('%s','now'))
+)`);
+db.pragma('journal_mode = WAL');
 
 const app = express();
 app.use(cors());
@@ -12,6 +22,30 @@ app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/api/cache/get', (req, res) => {
+  const { address } = req.query;
+  if (!address) return res.json({ found: false });
+  const row = db.prepare('SELECT std_data, parse_data FROM parse_cache WHERE address = ?').get(address);
+  if (row) {
+    res.json({ found: true, std: JSON.parse(row.std_data), parse: JSON.parse(row.parse_data) });
+  } else {
+    res.json({ found: false });
+  }
+});
+
+app.post('/api/cache/set', (req, res) => {
+  const { address, std, parse } = req.body;
+  if (!address || !std || !parse) return res.status(400).json({ error: '参数不完整' });
+  const stmt = db.prepare('INSERT OR REPLACE INTO parse_cache (address, std_data, parse_data) VALUES (?, ?, ?)');
+  stmt.run(address, JSON.stringify(std), JSON.stringify(parse));
+  res.json({ ok: true });
+});
+
+app.post('/api/cache/clear', (req, res) => {
+  db.exec('DELETE FROM parse_cache');
+  res.json({ ok: true });
 });
 
 const ZT_API_BASE = 'https://zmap-openapi.gw.zt-express.com';
@@ -151,7 +185,32 @@ app.post('/api/parse', async (req, res) => {
     }
   } catch (e) { results.zt_pro = { error: e.message }; }
 
-  // 2. 高德 GEO
+  // 2. 高德 POI
+  try {
+    const poiResp = await axios.get('https://restapi.amap.com/v3/place/text', {
+      params: { key: AMAP_KEYS[0], keywords: formatted, output: 'json' }, timeout: 10000
+    });
+    const poiData = poiResp.data;
+    if (poiData.status === '1' && poiData.pois && poiData.pois.length > 0) {
+      const poi = poiData.pois[0];
+      const loc = poi.location.split(',');
+      if (loc.length === 2) {
+        results.amap_poi = {
+          lat: parseFloat(loc[1]), lng: parseFloat(loc[0]),
+          raw: {
+            name: poi.name || '',
+            address: poi.address || '',
+            adname: poi.adname || '',
+            pname: poi.pname || '',
+            cityname: poi.cityname || '',
+            typecode: poi.typecode || ''
+          }
+        };
+      }
+    }
+  } catch (e) { results.amap_poi = { error: e.message }; }
+
+  // 3. 高德 GEO
   try {
     const data = await amapGeocode(formatted);
     if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
@@ -173,7 +232,7 @@ app.post('/api/parse', async (req, res) => {
     }
   } catch (e) { results.amap_geo = { error: e.message }; }
 
-  // 3. 百度 GEO (返回GCJ02坐标)
+  // 百度 GEO (返回GCJ02坐标)
   try {
     const resp = await axios.get('https://api.map.baidu.com/geocoding/v3/', {
       params: { address: formatted, ak: BAIDU_AK, ret_coordtype: 'gcj02ll', output: 'json', extension_poi_infos: 'true' }, timeout: 10000
@@ -199,7 +258,32 @@ app.post('/api/parse', async (req, res) => {
     }
   } catch (e) { results.baidu_geo = { error: e.message }; }
 
-  // 4. 百度聚合解析
+  // 百度 POI
+  try {
+    const resp = await axios.get('https://api.map.baidu.com/place/v2/search', {
+      params: { ak: BAIDU_AK, query: formatted, region: '全国', output: 'json' }, timeout: 10000
+    });
+    const data = resp.data;
+    if (data.status === 0 && data.results && data.results.length > 0) {
+      const r = data.results[0];
+      const [gcjLng, gcjLat] = bd09togcj02(r.location.lng, r.location.lat);
+      results.baidu_poi = {
+        lat: gcjLat, lng: gcjLng,
+        raw: {
+          name: r.name || '',
+          address: r.address || '',
+          province: r.province || '',
+          city: r.city || '',
+          area: r.area || '',
+          street_id: r.street_id || '',
+          uid: r.uid || '',
+          detail: r.detail || 0
+        }
+      };
+    }
+  } catch (e) { results.baidu_poi = { error: e.message }; }
+
+  // 百度聚合解析
   try {
     const resp = await axios.get('https://api.map.baidu.com/address_analyzer/v2', {
       params: { ak: BAIDU_ANALYZER_AK, address: formatted }, timeout: 10000
@@ -225,7 +309,7 @@ app.post('/api/parse', async (req, res) => {
     }
   } catch (e) { results.baidu_agg = { error: e.message }; }
 
-  // 5. 集团解析 (BD09 -> GCJ02)
+  // 6. 集团解析 (BD09 -> GCJ02)
   try {
     const data = await callGroupParse(formatted);
     if (data.statusCode === '00' && data.result) {

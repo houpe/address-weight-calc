@@ -103,7 +103,32 @@ module.exports = async (req, res) => {
     }
   } catch (e) { results.zt_pro = { error: e.message }; }
 
-  // 2. 高德 GEO
+  // 2. 高德 POI
+  try {
+    const poiResp = await axios.get('https://restapi.amap.com/v3/place/text', {
+      params: { key: AMAP_KEYS[0], keywords: formatted, output: 'json' }, timeout: 10000
+    });
+    const poiData = poiResp.data;
+    if (poiData.status === '1' && poiData.pois && poiData.pois.length > 0) {
+      const poi = poiData.pois[0];
+      const loc = poi.location.split(',');
+      if (loc.length === 2) {
+        results.amap_poi = {
+          lat: parseFloat(loc[1]), lng: parseFloat(loc[0]),
+          raw: {
+            name: poi.name || '',
+            address: poi.address || '',
+            adname: poi.adname || '',
+            pname: poi.pname || '',
+            cityname: poi.cityname || '',
+            typecode: poi.typecode || ''
+          }
+        };
+      }
+    }
+  } catch (e) { results.amap_poi = { error: e.message }; }
+
+  // 3. 高德 GEO
   try {
     const data = await amapGeocode(formatted);
     if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
@@ -151,7 +176,32 @@ module.exports = async (req, res) => {
     }
   } catch (e) { results.baidu_geo = { error: e.message }; }
 
-  // 4. 百度聚合解析
+  // 4. 百度 POI
+  try {
+    const resp = await axios.get('https://api.map.baidu.com/place/v2/search', {
+      params: { ak: BAIDU_AK, query: formatted, region: '全国', output: 'json' }, timeout: 10000
+    });
+    const data = resp.data;
+    if (data.status === 0 && data.results && data.results.length > 0) {
+      const r = data.results[0];
+      const [gcjLng, gcjLat] = bd09togcj02(r.location.lng, r.location.lat);
+      results.baidu_poi = {
+        lat: gcjLat, lng: gcjLng,
+        raw: {
+          name: r.name || '',
+          address: r.address || '',
+          province: r.province || '',
+          city: r.city || '',
+          area: r.area || '',
+          street_id: r.street_id || '',
+          uid: r.uid || '',
+          detail: r.detail || 0
+        }
+      };
+    }
+  } catch (e) { results.baidu_poi = { error: e.message }; }
+
+  // 5. 百度聚合解析
   try {
     const resp = await axios.get('https://api.map.baidu.com/address_analyzer/v2', {
       params: { ak: BAIDU_ANALYZER_AK, address: formatted }, timeout: 10000
@@ -177,7 +227,7 @@ module.exports = async (req, res) => {
     }
   } catch (e) { results.baidu_agg = { error: e.message }; }
 
-  // 5. 集团解析 (BD09 -> GCJ02)
+  // 6. 集团解析 (BD09 -> GCJ02)
   try {
     const data = await callGroupParse(formatted);
     if (data.statusCode === '00' && data.result) {

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>地址坐标可靠度计算器</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2338bdf8' d='M16 2C10.5 2 6 6.5 6 12c0 7 10 16 10 16s10-9 10-16c0-5.5-4.5-10-10-10zm0 14a4 4 0 110-8 4 4 0 010 8z'/%3E%3C/svg%3E">
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --surface2: #334155; --border: #475569;
@@ -104,6 +105,7 @@
     .source-table th:first-child { border-radius: 4px 0 0 4px; }
     .source-table th:last-child { border-radius: 0 4px 4px 0; }
     .source-table td { padding: 4px 5px; border-bottom: 1px solid var(--surface2); font-family: 'SF Mono', monospace; font-size: 10px; }
+    .source-table tr[onclick]:hover { background: var(--surface2); }
     .tag { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; }
     .tag-valid { background: rgba(74,222,128,0.15); color: var(--green); }
     .tag-dropped { background: rgba(248,113,113,0.15); color: var(--red); }
@@ -167,11 +169,16 @@
           </div>
 
           <div class="address-mode" id="address-mode">
-            <div class="input-area" style="position:relative">
+            <div class="input-area">
               <div class="card-title">输入地址</div>
-              <textarea id="input-address" style="padding-right:60px">广东省深圳市宝安区鹤州路38号</textarea>
-              <button class="btn btn-secondary" style="position:absolute;top:24px;right:0;padding:4px 8px;font-size:10px;z-index:20" onclick="toggleHistory()">历史 ▾</button>
-              <div id="address-history" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:2px;background:var(--surface);border:1px solid var(--border);border-radius:6px;max-height:150px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
+              <textarea id="input-address" style="padding-right:60px;min-height:40px;max-height:60px">广东省深圳市宝安区鹤州路38号</textarea>
+            </div>
+            <div class="card" style="padding:8px 10px;">
+              <div class="card-title" style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+                历史记录
+                <button class="btn btn-secondary" style="padding:2px 6px;font-size:9px" onclick="clearHistory()">清空</button>
+              </div>
+              <div id="address-history" style="max-height:180px;overflow-y:auto"></div>
             </div>
             <div class="card-title">格式化地址</div>
             <div id="formatted-display">-</div>
@@ -185,7 +192,7 @@
             </div>
             <div class="param-item">
               <label>离群阈值 (米)</label>
-              <input id="outlier" type="number" value="5000" min="500" max="50000" step="500">
+              <input id="outlier" type="number" value="50000" min="500" max="100000" step="500">
             </div>
           </div>
           <div class="actions">
@@ -218,6 +225,7 @@
             <div style="display:flex;gap:8px;align-items:center">
               <input id="map-coord-input" type="text" placeholder="lat,lng 如:32.069,112.152" style="width:180px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;font-size:11px;outline:none">
               <button class="map-toggle" onclick="addMapMarker()" style="padding:4px 8px;font-size:10px">标记</button>
+              <button class="map-toggle" id="btn-ranging" onclick="toggleRanging()" style="padding:4px 8px;font-size:10px">测距</button>
               <button class="map-toggle active" id="map-toggle" onclick="toggleMap()">隐藏</button>
               <span id="map-coord-msg" style="font-size:10px;color:var(--green);min-width:60px"></span>
             </div>
@@ -231,7 +239,22 @@
   <script>
     const AMAP_KEY = 'ca242a6c6d25a9f4b76c5349c2e1897d';
     const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3001' : '/gis';
-    const parseCache = {};
+
+    async function getCached(address) {
+      try {
+        const resp = await fetch(`${API_BASE}/api/cache/get?address=${encodeURIComponent(address)}`);
+        return await resp.json();
+      } catch { return { found: false }; }
+    }
+
+    async function setCache(address, std, parse) {
+      try {
+        await fetch(`${API_BASE}/api/cache/set`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ address, std, parse })
+        });
+      } catch {}
+    }
 
     let currentMode = 'coord';
     let currentMethod = '5coord';
@@ -250,9 +273,9 @@
         weights: {'zt_pro':4,'amap_geo':2,'baidu_geo':2,'manual':3}
       },
       'address': {
-        label: '地址解析（4源）',
-        sources: ['zt_pro','amap_geo','baidu_geo','group_parse'],
-        weights: {'zt_pro':4,'amap_geo':2,'baidu_geo':2,'group_parse':3}
+        label: '地址解析（6源）',
+        sources: ['zt_pro','amap_poi','baidu_poi','amap_geo','baidu_geo','group_parse'],
+        weights: {'group_parse':5,'zt_pro':1,'amap_geo':1,'baidu_geo':1,'amap_poi':1,'baidu_poi':1}
       }
     };
 
@@ -268,8 +291,8 @@
       '手选':'manual','manual':'manual',
     };
 
-    const SOURCE_ABBREV = {'zt_pro':'中','amap_poi':'高','baidu_poi':'百','tian_poi':'天','amap_geo':'高','baidu_geo':'百','tian_geo':'天','manual':'手','baidu_agg':'百聚','group_parse':'团'};
-    const SOURCE_COLORS = {'zt_pro':'#8b5cf6','amap_poi':'#38bdf8','baidu_poi':'#f97316','tian_poi':'#a78bfa','amap_geo':'#0ea5e9','baidu_geo':'#fb923c','tian_geo':'#c084fc','manual':'#ec4899','baidu_agg':'#f43f5e','group_parse':'#22c55e'};
+    const SOURCE_ABBREV = {'zt_pro':'中','amap_poi':'高P','baidu_poi':'百P','tian_poi':'天','amap_geo':'高','baidu_geo':'百','tian_geo':'天','manual':'手','baidu_agg':'百聚','group_parse':'集'};
+    const SOURCE_COLORS = {'zt_pro':'#8b5cf6','amap_poi':'#06b6d4','baidu_poi':'#e11d48','tian_poi':'#a78bfa','amap_geo':'#0ea5e9','baidu_geo':'#fb923c','tian_geo':'#c084fc','manual':'#ec4899','baidu_agg':'#f43f5e','group_parse':'#22c55e'};
     const SOURCE_LABELS = {'zt_pro':'中通PRO','amap_poi':'高德POI','baidu_poi':'百度POI','tian_poi':'天地图POI','amap_geo':'高德GEO','baidu_geo':'百度GEO','tian_geo':'天地图GEO','manual':'手选','baidu_agg':'百度聚合','group_parse':'集团解析'};
 
     function toRadians(d) { return d * Math.PI / 180; }
@@ -302,7 +325,7 @@
       document.getElementById('method-5').classList.toggle('active', m==='5coord');
       document.getElementById('method-2').classList.toggle('active', m==='2coord');
       const cfg = METHOD_CONFIG[m];
-      const lm = {'zt_pro':'中通_PRO','amap_poi':'高德poi/23系统','baidu_poi':'百度poi/24系统','tian_poi':'天地图poi','amap_geo':'高德GEO','baidu_geo':'百度GEO','tian_geo':'天地图GEO','manual':'手选'};
+        const lm = {'zt_pro':'中通_PRO','amap_poi':'高德poi','baidu_poi':'百度poi','tian_poi':'天地图poi','amap_geo':'高德GEO','baidu_geo':'百度GEO','tian_geo':'天地图GEO','manual':'手选','group_parse':'集团解析'};
       document.getElementById('hint-sources').textContent = '支持: ' + cfg.sources.map(s=>lm[s]||s).join('/');
     }
 
@@ -368,7 +391,7 @@
     function renderResult(result) {
       const card=document.getElementById('result-content'), detailCard=document.getElementById('source-detail');
       const circ=2*Math.PI*54, offset=circ*(1-result.score), color=getScoreColor(result.score), verdict=getVerdict(result.score, result.msg);
-      const label = currentMode === 'address' ? '地址解析（4源）' : getMethodConfig().label;
+      const label = currentMode === 'address' ? '地址解析（6源）' : getMethodConfig().label;
       card.innerHTML=`
         <div class="result-panel">
           <div class="method-badge">${label}</div>
@@ -386,8 +409,16 @@
           <div class="center-loc">质心: ${result.centerLng}, ${result.centerLat}</div>
         </div>`;
       let html=`<table class="source-table"><thead><tr><th>来源</th><th>权重</th><th>距质心</th><th>状态</th></tr></thead><tbody>`;
-      for(const s of result.validSources) html+=`<tr><td>${SOURCE_LABELS[s.source]||s.source}</td><td>${(s.weightRatio*100).toFixed(1)}%</td><td>${s.dist.toFixed(1)}m</td><td><span class="tag tag-valid">有效</span></td></tr>`;
-      for(const s of result.dropped) html+=`<tr><td>${SOURCE_LABELS[s]||s}</td><td>-</td><td>-</td><td><span class="tag tag-dropped">离群</span></td></tr>`;
+      for(const s of result.validSources) {
+        const p = lastParsers.find(x => x.source === s.source);
+        const clickAttr = p && p.lat ? `onclick="zoomToSource(${p.lng},${p.lat},'${SOURCE_LABELS[s.source]||s.source}')" style="cursor:pointer"` : '';
+        html+=`<tr ${clickAttr}><td>${SOURCE_LABELS[s.source]||s.source}</td><td>${(s.weightRatio*100).toFixed(1)}%</td><td>${s.dist.toFixed(1)}m</td><td><span class="tag tag-valid">有效</span></td></tr>`;
+      }
+      for(const s of result.dropped) {
+        const p = lastParsers.find(x => x.source === s);
+        const clickAttr = p && p.lat ? `onclick="zoomToSource(${p.lng},${p.lat},'${SOURCE_LABELS[s]||s}')" style="cursor:pointer"` : '';
+        html+=`<tr ${clickAttr}><td>${SOURCE_LABELS[s]||s}</td><td>-</td><td>-</td><td><span class="tag tag-dropped">离群</span></td></tr>`;
+      }
       html+=`</tbody></table>`;
 
       // Address mode: show detailed parsing results
@@ -408,6 +439,18 @@
             <div>坐标: ${group.lng}, ${group.lat}</div>
             <div style="margin-top:4px"><a href="javascript:void(0)" onclick="toggleRaw('group_raw')" style="color:var(--accent);font-size:10px;text-decoration:none">更多 ▾</a></div>
             <div id="group_raw" style="display:none;margin-top:6px"><pre style="background:var(--surface2);padding:8px;border-radius:4px;overflow:auto;font-size:9px;color:var(--text-dim);max-height:200px">${JSON.stringify(group.raw, null, 2)}</pre></div>
+          </div>`;
+        }
+        // 高德 POI details
+        const amapPoi = lastRawData.amap_poi;
+        if (amapPoi && !amapPoi.error) {
+          html += `<div style="background:var(--bg);border-radius:6px;padding:8px;margin-bottom:6px;font-size:10px;line-height:1.6">
+            <div style="color:#06b6d4;font-weight:600;margin-bottom:2px">高德POI</div>
+            <div>名称: ${amapPoi.raw?.name || '-'}</div>
+            <div>地址: ${amapPoi.raw?.address || '-'}</div>
+            <div>省/市/区: ${amapPoi.raw?.pname || '-'} / ${amapPoi.raw?.cityname || '-'} / ${amapPoi.raw?.adname || '-'}</div>
+            <div>类型码: ${amapPoi.raw?.typecode || '-'}</div>
+            <div>坐标: ${amapPoi.lng}, ${amapPoi.lat}</div>
           </div>`;
         }
         // 中通 PRO details
@@ -452,6 +495,17 @@
             <div id="baidu_raw" style="display:none;margin-top:6px"><pre style="background:var(--surface2);padding:8px;border-radius:4px;overflow:auto;font-size:9px;color:var(--text-dim);max-height:200px">${JSON.stringify(baidu.raw, null, 2)}</pre></div>
           </div>`;
         }
+        // 百度 POI details
+        const baiduPoi = lastRawData.baidu_poi;
+        if (baiduPoi && !baiduPoi.error) {
+          html += `<div style="background:var(--bg);border-radius:6px;padding:8px;margin-bottom:6px;font-size:10px;line-height:1.6">
+            <div style="color:#e11d48;font-weight:600;margin-bottom:2px">百度POI</div>
+            <div>名称: ${baiduPoi.raw?.name || '-'}</div>
+            <div>地址: ${baiduPoi.raw?.address || '-'}</div>
+            <div>省/市/区县: ${baiduPoi.raw?.province || '-'} / ${baiduPoi.raw?.city || '-'} / ${baiduPoi.raw?.area || '-'}</div>
+            <div>坐标: ${baiduPoi.lng}, ${baiduPoi.lat}</div>
+          </div>`;
+        }
         // 百度聚合 details
         const baiduAgg = lastRawData.baidu_agg;
         if (baiduAgg && !baiduAgg.error) {
@@ -473,6 +527,12 @@
       detailCard.innerHTML=html;
     }
 
+    function zoomToSource(lng, lat, label) {
+      if (!mapInstance) { initMap().then(() => { mapInstance.setCenter([lng, lat]); mapInstance.setZoom(18); }); return; }
+      mapInstance.setCenter([lng, lat]);
+      mapInstance.setZoom(18);
+    }
+
     function toggleRaw(id) {
       const el = document.getElementById(id);
       if (el) {
@@ -485,7 +545,7 @@
       return new Promise((resolve,reject)=>{
         if(amapLoaded){resolve();return;}
         const script=document.createElement('script');
-        script.src=`https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Marker,AMap.InfoWindow`;
+        script.src=`https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Marker,AMap.InfoWindow,AMap.RangingTool`;
         script.onload=()=>{amapLoaded=true;resolve();};
         script.onerror=()=>reject(new Error('高德地图加载失败'));
         document.head.appendChild(script);
@@ -504,7 +564,7 @@
         container.style.width='100%';
         container.style.height='100%';
         console.log('initMap: container size:', container.clientWidth, container.clientHeight);
-        mapInstance=new AMap.Map('map',{zoom:14,center:[121.48,31.22],mapStyle:'amap://styles/dark',features:['bg','road','building','point']});
+        mapInstance=new AMap.Map('map',{zoom:14,center:[121.48,31.22],features:['bg','road','building','point']});
         console.log('initMap: map created, valid:', !!mapInstance);
       }catch(e){
         console.error('initMap error:', e);
@@ -605,8 +665,8 @@
       }
       if(result.centerLat&&result.centerLng){
         const cm=new AMap.Marker({position:[result.centerLng,result.centerLat],
-          content:`<div style="width:36px;height:36px;border-radius:50%;background:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;border:3px solid #fff;box-shadow:0 0 0 4px rgba(56,189,248,0.3);">&#9733;</div>`,
-          offset:new AMap.Pixel(-18,-18),zIndex:100});
+          content:`<div style="width:18px;height:18px;border-radius:50%;background:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;border:2px solid #fff;box-shadow:0 0 0 3px rgba(56,189,248,0.3);">&#9733;</div>`,
+          offset:new AMap.Pixel(-9,-9),zIndex:100});
         cm.setMap(mapInstance); mapMarkers.push(cm);
       }
       if(allPoints.length>0) mapInstance.setFitView(mapMarkers,false,[30,30,30,30]);
@@ -636,9 +696,10 @@
         try {
           // Check cache first
           let stdData, parseData;
-          if (parseCache[address]) {
-            stdData = parseCache[address].std;
-            parseData = parseCache[address].parse;
+          const cached = await getCached(address);
+          if (cached.found) {
+            stdData = cached.std;
+            parseData = cached.parse;
           } else {
             // Step 1: Standardize
             const stdResp = await fetch(`${API_BASE}/api/standardize`, {
@@ -656,7 +717,7 @@
             parseData = await parseResp.json();
 
             // Store in cache
-            parseCache[address] = { std: stdData, parse: parseData };
+            setCache(address, stdData, parseData);
           }
 
           const formatted = stdData.formatted;
@@ -673,6 +734,7 @@
           }
 
           const result = calculateReliability(parsers, tau, outlier);
+          lastParsers = parsers;
           renderResult(result);
           renderMap(result, parsers);
           saveAddressHistory(address);
@@ -701,7 +763,8 @@
 中通_PRO\t121.50868589535285,38.84132130739873
 手选\t121.50868589535285,38.84132130739873`;
       } else {
-        document.getElementById('input-address').value = '广东省深圳市宝安区鹤州路38号';
+        const history = loadAddressHistory();
+        document.getElementById('input-address').value = history.length > 0 ? history[0] : '广东省深圳市宝安区鹤州路38号';
       }
     }
 
@@ -721,6 +784,12 @@
       history.unshift(address);
       if (history.length > 20) history = history.slice(0, 20);
       localStorage.setItem('addr_history', JSON.stringify(history));
+      refreshHistory();
+    }
+
+    function clearHistory() {
+      localStorage.removeItem('addr_history');
+      document.getElementById('address-history').innerHTML = '<div style="padding:8px;text-align:center;color:var(--text-dim);font-size:10px">暂无历史记录</div>';
     }
 
     function loadAddressHistory() {
@@ -742,15 +811,33 @@
 
     function selectHistory(addr) {
       document.getElementById('input-address').value = addr;
-      document.getElementById('address-history').style.display = 'none';
     }
 
-    document.addEventListener('click', function(e) {
-      const hist = document.getElementById('address-history');
-      if (hist && hist.style.display === 'block' && !e.target.closest('#address-history') && !e.target.closest('button[onclick="toggleHistory()"]')) {
-        hist.style.display = 'none';
+    function refreshHistory() {
+      const el = document.getElementById('address-history');
+      if (!el) return;
+      const history = loadAddressHistory();
+      if (!history.length) { el.innerHTML = '<div style="padding:8px;text-align:center;color:var(--text-dim);font-size:10px">暂无历史记录</div>'; }
+      else {
+        el.innerHTML = history.map(a => `<div style="padding:6px 8px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--surface2);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:4px" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''" onclick="selectHistory('${a.replace(/'/g, "\\'")}')">${a}</div>`).join('');
       }
-    });
+    }
+
+    let mapRangingTool = null, rangingActive = false;
+    function toggleRanging() {
+      if (!mapInstance) { initMap().then(() => toggleRanging()); return; }
+      if (!mapRangingTool) {
+        mapRangingTool = new AMap.RangingTool(mapInstance);
+        mapRangingTool.on('end', () => {
+          mapRangingTool.turnOff();
+          rangingActive = false;
+          document.getElementById('btn-ranging').classList.remove('active');
+        });
+      }
+      rangingActive ? mapRangingTool.turnOff() : mapRangingTool.turnOn();
+      rangingActive = !rangingActive;
+      document.getElementById('btn-ranging').classList.toggle('active', rangingActive);
+    }
 
     document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter')calculate();});
     window.addEventListener('resize',()=>{if(mapVisible&&mapInstance)mapInstance.resize();});
@@ -758,6 +845,7 @@
     setMode('address');
     setMethod('5coord');
     loadDefault();
+    setTimeout(refreshHistory, 100);
   </script>
 </body>
 </html>
