@@ -1,0 +1,167 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "地址坐标可靠度计算器" [level=1] [ref=e4]
+    - generic [ref=e5]: 多源坐标融合 · 加权质心 · 综合置信度
+  - generic [ref=e6]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: 计算模式
+      - generic [ref=e10]:
+        - button "地址 自动解析" [ref=e11] [cursor=pointer]:
+          - text: 地址
+          - generic [ref=e12]: 自动解析
+        - button "坐标 手动输入" [ref=e13] [cursor=pointer]:
+          - text: 坐标
+          - generic [ref=e14]: 手动输入
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: 输入地址
+          - textbox [ref=e18]: 广东省深圳市宝安区鹤州路38号
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - text: 历史记录
+            - button "清空" [ref=e21] [cursor=pointer]
+          - generic [ref=e59] [cursor=pointer]: 广东省深圳市宝安区鹤州路38号
+        - generic [ref=e22]: 格式化地址
+        - generic [ref=e23]: 广东省深圳市宝安区鹤州路38号
+        - generic [ref=e24]: 点击计算后自动调用 API 解析
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: tau (米)
+          - spinbutton [ref=e28]: "500"
+        - generic [ref=e29]:
+          - generic [ref=e30]: 离群阈值 (米)
+          - spinbutton [ref=e31]: "50000"
+      - generic [ref=e32]:
+        - button "计算" [ref=e33] [cursor=pointer]
+        - button "默认" [ref=e34] [cursor=pointer]
+        - button "清空" [ref=e35] [cursor=pointer]
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]: 计算结果
+        - generic [ref=e60]:
+          - generic [ref=e61]: 地址解析（6源）
+          - generic [ref=e62]:
+            - text: 分词地址
+            - text: 广东省深圳市宝安区鹤州路38号
+          - img [ref=e64]:
+            - generic [ref=e68]: 3.8%
+            - generic [ref=e69]: 可靠度
+          - generic [ref=e70]: 不可靠·人工复核
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e73]: 加权偏差
+              - generic [ref=e74]: 1632.78 m
+            - generic [ref=e75]:
+              - generic [ref=e76]: 有效/剔除
+              - generic [ref=e77]: 5 / 0
+          - generic [ref=e78]: "质心: 113.864648, 22.618185"
+      - generic [ref=e43]:
+        - generic [ref=e44]: 来源明细
+        - generic [ref=e45]:
+          - table [ref=e79]:
+            - rowgroup [ref=e80]:
+              - row "来源 权重 距质心 状态" [ref=e81]:
+                - columnheader "来源" [ref=e82]
+                - columnheader "权重" [ref=e83]
+                - columnheader "距质心" [ref=e84]
+                - columnheader "状态" [ref=e85]
+            - rowgroup [ref=e86]:
+              - row "中通PRO 11.1% 844.5m 有效" [ref=e87] [cursor=pointer]:
+                - cell "中通PRO" [ref=e88]
+                - cell "11.1%" [ref=e89]
+                - cell "844.5m" [ref=e90]
+                - cell "有效" [ref=e91]:
+                  - generic [ref=e92]: 有效
+              - row "高德GEO 11.1% 7298.1m 有效" [ref=e93] [cursor=pointer]:
+                - cell "高德GEO" [ref=e94]
+                - cell "11.1%" [ref=e95]
+                - cell "7298.1m" [ref=e96]
+                - cell "有效" [ref=e97]:
+                  - generic [ref=e98]: 有效
+              - row "百度GEO 11.1% 782.5m 有效" [ref=e99] [cursor=pointer]:
+                - cell "百度GEO" [ref=e100]
+                - cell "11.1%" [ref=e101]
+                - cell "782.5m" [ref=e102]
+                - cell "有效" [ref=e103]:
+                  - generic [ref=e104]: 有效
+              - row "百度POI 11.1% 846.2m 有效" [ref=e105] [cursor=pointer]:
+                - cell "百度POI" [ref=e106]
+                - cell "11.1%" [ref=e107]
+                - cell "846.2m" [ref=e108]
+                - cell "有效" [ref=e109]:
+                  - generic [ref=e110]: 有效
+              - row "集团解析 55.6% 984.7m 有效" [ref=e111] [cursor=pointer]:
+                - cell "集团解析" [ref=e112]
+                - cell "55.6%" [ref=e113]
+                - cell "984.7m" [ref=e114]
+                - cell "有效" [ref=e115]:
+                  - generic [ref=e116]: 有效
+          - generic [ref=e117]:
+            - generic [ref=e118]: 解析详情
+            - generic [ref=e119]:
+              - generic [ref=e120]: 集团解析
+              - generic [ref=e121]: "名称: 鹤州路34号-1栋"
+              - generic [ref=e122]: "省/市/区: 广东省 / 深圳市 / 宝安区"
+              - generic [ref=e123]: "道路/门牌: 鹤州路 / 38号"
+              - generic [ref=e124]: "AOI名称: 渔业工业区"
+              - generic [ref=e125]: "AOI标签: 公司企业;园区"
+              - generic [ref=e126]: "POI标签: 房地产;内部楼栋"
+              - generic [ref=e127]: "来源: poiV2 已修正: 否"
+              - generic [ref=e128]: "坐标: 113.8629276821781, 22.626897218890377"
+              - link "更多 ▾" [ref=e130] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - generic [ref=e131]:
+              - generic [ref=e132]: 中通 PRO
+              - generic [ref=e133]: "名称: 厨嫂当家(和健生活广场店)"
+              - generic [ref=e134]: "省/市/区: 广东省 / 深圳市 / 宝安区"
+              - generic [ref=e135]: "乡镇/街道: 航城街道"
+              - generic [ref=e136]: "坐标: 113.8625228635958, 22.625521779001925"
+              - link "更多 ▾" [ref=e138] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - generic [ref=e139]:
+              - generic [ref=e140]: 高德 GEO
+              - generic [ref=e141]: "省/市/区: 广东省 / 深圳市 / 宝安区"
+              - generic [ref=e142]: "街道:"
+              - generic [ref=e143]: "门牌:"
+              - generic [ref=e144]: "级别: 区县"
+              - generic [ref=e145]: "坐标: 113.883831, 22.554986"
+              - link "更多 ▾" [ref=e147] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - generic [ref=e148]:
+              - generic [ref=e149]: 百度 GEO
+              - generic [ref=e150]: "理解度: 99"
+              - generic [ref=e151]: "精度: 80"
+              - generic [ref=e152]: "级别: 门址"
+              - generic [ref=e153]: "省份/城市/区县: 广东省 / 深圳市 / 宝安区"
+              - generic [ref=e154]: "街道: 鹤洲路"
+              - generic [ref=e155]: "坐标: 113.8598872871961, 22.62368065313073"
+              - link "更多 ▾" [ref=e157] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - generic [ref=e158]:
+              - generic [ref=e159]: 百度POI
+              - generic [ref=e160]: "名称: 鹤洲路"
+              - generic [ref=e161]: "地址: 广东省深圳市宝安区"
+              - generic [ref=e162]: "省/市/区县: 广东省 / 深圳市 / 宝安区"
+              - generic [ref=e163]: "坐标: 113.86095395237527, 22.624988325359062"
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - generic [ref=e51]: 坐标分布地图
+        - generic [ref=e52]:
+          - textbox "lat,lng 如:32.069,112.152" [ref=e53]
+          - button "标记" [ref=e54] [cursor=pointer]
+          - button "测距" [ref=e55] [cursor=pointer]
+          - button "隐藏" [ref=e56] [cursor=pointer]
+      - generic [ref=e57]:
+        - iframe [ref=e164]:
+          
+        - generic [ref=e166]:
+          - generic:
+            - generic [ref=e169] [cursor=pointer]: 中
+            - generic [ref=e172] [cursor=pointer]: 高
+            - generic [ref=e175] [cursor=pointer]: 百
+            - generic [ref=e178] [cursor=pointer]: 百P
+            - generic [ref=e181] [cursor=pointer]: 集
+            - generic [ref=e184]: ★
+        - generic:
+          - img
+        - generic [ref=e185]: © 2026 AutoNavi - GS(2025)5996号

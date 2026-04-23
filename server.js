@@ -56,8 +56,8 @@ const BAIDU_ANALYZER_AK = process.env.BAIDU_AK || 'HIM3QorvOGqquDRvLSZ1npMH9lplz
 // 集团解析配置 (从 .env 读取)
 const GROUP_API = {
   url: process.env.GROUP_API_URL || 'https://japi.zto.com/zto.routetime.address.parsePoi',
-  appKey: process.env.GROUP_APP_KEY || '8ceef4d83f892f5244f61',
-  appSecret: process.env.GROUP_APP_SECRET || 'f867a4267704d9ba6b8927b4090fe3c6'
+  appKey: process.env.GROUP_APP_KEY || '2bb1ff34451005e98445a',
+  appSecret: process.env.GROUP_APP_SECRET || '4f7d126c314b78ab0cf354665e3878e4'
 };
 
 function normalizeAddressText(address) {

@@ -1,0 +1,51 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "地址坐标可靠度计算器" [level=1] [ref=e4]
+    - generic [ref=e5]: 多源坐标融合 · 加权质心 · 综合置信度
+  - generic [ref=e6]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: 计算模式
+      - generic [ref=e10]:
+        - button "地址 自动解析" [ref=e11] [cursor=pointer]:
+          - text: 地址
+          - generic [ref=e12]: 自动解析
+        - button "坐标 手动输入" [ref=e13] [cursor=pointer]:
+          - text: 坐标
+          - generic [ref=e14]: 手动输入
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: 输入地址
+          - textbox [ref=e18]: 广东省深圳市宝安区鹤州路38号
+        - generic [ref=e20]:
+          - text: 历史记录
+          - button "清空" [ref=e21] [cursor=pointer]
+        - generic [ref=e22]: 格式化地址
+        - generic [ref=e23]: "-"
+        - generic [ref=e24]: 点击计算后自动调用 API 解析
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: tau (米)
+          - spinbutton [ref=e28]: "500"
+        - generic [ref=e29]:
+          - generic [ref=e30]: 离群阈值 (米)
+          - spinbutton [ref=e31]: "50000"
+      - generic [ref=e32]:
+        - button "计算" [ref=e33] [cursor=pointer]
+        - button "默认" [ref=e34] [cursor=pointer]
+        - button "清空" [ref=e35] [cursor=pointer]
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]: 计算结果
+        - generic [ref=e40]:
+          - generic [ref=e41]: 📊
+          - generic [ref=e42]: 点击计算
+      - generic [ref=e43]:
+        - generic [ref=e44]: 来源明细
+        - generic [ref=e47]: 暂无数据
+    - generic [ref=e50]:
+      - generic [ref=e51]: 坐标分布地图
+      - generic [ref=e52]:
+        - textbox "lat,lng 如:32.069,112.152" [ref=e53]
+        - button "标记" [ref=e54] [cursor=pointer]
+        - button "测距" [ref=e55] [cursor=pointer]
+        - button "隐藏" [ref=e56] [cursor=pointer]

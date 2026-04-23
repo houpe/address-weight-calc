@@ -1,0 +1,11 @@
+[   13320ms] [LOG] renderMap called with 5 parsers @ https://houpe.top/gis/:625
+[   13321ms] [LOG] renderMap: map not ready, calling initMap... @ https://houpe.top/gis/:628
+[   13321ms] [LOG] initMap: loading AMap... @ https://houpe.top/gis/:557
+[   13665ms] [LOG] initMap: AMap loaded, waiting for DOM... @ https://houpe.top/gis/:559
+[   13767ms] [LOG] initMap: container size: 534 512 @ https://houpe.top/gis/:565
+[   13788ms] [LOG] initMap: map created, valid: true @ https://houpe.top/gis/:567
+[   13788ms] [LOG] drawMapMarkers: removing old markers, adding new... @ https://houpe.top/gis/:638
+[   15733ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ https://webapi.amap.com/maps?v=2.0&key=ca242a6c6d25a9f4b76c5349c2e1897d&plugin=AMap.Marker,AMap.InfoWindow,AMap.RangingTool:0
+[   17628ms] [LOG] renderMap called with 5 parsers @ https://houpe.top/gis/:625
+[   17628ms] [LOG] renderMap: map ready, drawing markers... @ https://houpe.top/gis/:631
+[   17628ms] [LOG] drawMapMarkers: removing old markers, adding new... @ https://houpe.top/gis/:638
