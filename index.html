@@ -386,6 +386,44 @@
       .col-map .map-header > div:last-child { display: none !important; }
       .col-map .map-header { padding: 8px 12px; }
       #map { height: calc(100% - 40px) !important; min-height: 260px !important; }
+      .wms-layer-control {
+        left: 8px !important;
+        right: 8px !important;
+        bottom: 8px !important;
+        min-width: 0 !important;
+        padding: 6px !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        gap: 4px !important;
+        border-radius: 6px !important;
+        background: rgba(30, 41, 59, 0.9) !important;
+      }
+      .wms-layer-control > div:last-child { display: none !important; }
+      .wms-layer-item {
+        flex: 1 1 0 !important;
+        gap: 4px !important;
+        padding: 4px 5px !important;
+        min-width: 0 !important;
+      }
+      .wms-color-box {
+        width: 12px !important;
+        height: 12px !important;
+        border-radius: 2px !important;
+      }
+      .wms-layer-item span {
+        font-size: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+      .wms-layer-item span::after {
+        content: attr(data-short);
+        font-size: 10px !important;
+      }
+      .wms-checkbox {
+        width: 14px !important;
+        height: 14px !important;
+      }
       
       /* Result card should show all content */
       .result-card { flex: 0 0 auto !important; }
@@ -426,7 +464,7 @@
       <span class="sub">多源坐标融合 · 加权质心 · 综合置信度</span>
       <div id="user-info" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
         <span id="user-name" style="font-size:12px;color:var(--text-dim);"></span>
-        <img id="user-avatar" style="width:28px;height:28px;border-radius:50%;display:none;" />
+        <img id="user-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect fill='%233a3a3a' width='40' height='40'/%3E%3Ccircle cx='20' cy='14' r='7' fill='%23888'/%3E%3Cellipse cx='20' cy='32' rx='12' ry='10' fill='%23888'/%3E%3C/svg%3E" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />
         <button id="logout-btn" style="display:none;padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:11px;cursor:pointer;">退出</button>
       </div>
     </div>
@@ -521,18 +559,27 @@
           <div class="wms-layer-control" id="wms-layer-control">
             <div class="wms-layer-item" onclick="toggleWMSLayer('zy')">
               <div class="wms-color-box" style="background:#f44336"></div>
-              <span>自营覆盖</span>
+              <span data-short="自营">自营覆盖</span>
               <input type="checkbox" id="check-zy" class="wms-checkbox" checked>
             </div>
             <div class="wms-layer-item" onclick="toggleWMSLayer('sf')">
               <div class="wms-color-box" style="background:#9e9e9e"></div>
-              <span>三方覆盖</span>
+              <span data-short="三方">三方覆盖</span>
               <input type="checkbox" id="check-sf" class="wms-checkbox" checked>
             </div>
             <div class="wms-layer-item" onclick="toggleWMSLayer('xj')">
               <div class="wms-color-box" style="background:#ffeb3b"></div>
-              <span>小件围栏</span>
+              <span data-short="小件">小件围栏</span>
               <input type="checkbox" id="check-xj" class="wms-checkbox">
+            </div>
+            <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px">
+              <div class="wms-layer-item" style="cursor:default;opacity:0.7">
+                <span style="font-size:11px;color:var(--text-dim)">图层格式</span>
+                <select id="wms-format-select" onchange="changeWMSFormat(this.value)" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:11px;outline:none">
+                  <option value="image/png">PNG</option>
+                  <option value="image/jpeg">JPEG</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -995,6 +1042,44 @@
       }
     }
 
+    function changeWMSFormat(format) {
+      if (!mapInstance || !wmsLayers.zy) return;
+      const layerIds = ['zy', 'sf', 'xj'];
+      const wasVisible = {};
+      layerIds.forEach(id => {
+        wasVisible[id] = document.getElementById('check-' + id).checked;
+        if (wmsLayers[id]) {
+          wmsLayers[id].setMap(null);
+        }
+      });
+      AMap.plugin(['AMap.TileLayer.WMS'], function() {
+        const wmsLayersConfig = [
+          { id: 'zy', name: 'query_fence_map_zy' },
+          { id: 'sf', name: 'query_fence_sf' },
+          { id: 'xj', name: '小件围栏' }
+        ];
+        wmsLayersConfig.forEach(cfg => {
+          wmsLayers[cfg.id] = new AMap.TileLayer.WMS({
+            url: 'https://gateway.ztocc.com/geoserver/ztocc/wms',
+            blend: true,
+            opacity: 0.7,
+            tileSize: 256,
+            params: {
+              'LAYERS': 'ztocc:' + cfg.name,
+              'STYLES': '',
+              'FORMAT': format,
+              'TRANSPARENT': true,
+              'VERSION': '1.1.1',
+              'SRS': 'EPSG:4326'
+            }
+          });
+          if (wasVisible[cfg.id]) {
+            wmsLayers[cfg.id].setMap(mapInstance);
+          }
+        });
+      });
+    }
+
     async function clearCache() {
       if (!confirm('确定要清除解析缓存吗？\n(仅清除API响应缓存，不影响历史记录)')) return;
       try {
@@ -1187,7 +1272,6 @@
         const avatar = document.getElementById('user-avatar');
         if (user.avatar) {
           avatar.src = user.avatar;
-          avatar.style.display = 'block';
         }
         document.getElementById('logout-btn').style.display = 'block';
       }

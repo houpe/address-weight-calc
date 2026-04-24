@@ -9,6 +9,14 @@ const Database = require('better-sqlite3');
 const session = require('express-session');
 const dingtalk = require('./dingtalk');
 
+function normalizeBasePath(basePath = '') {
+  if (!basePath || basePath === '/') return '';
+  return '/' + basePath.replace(/^\/+|\/+$/g, '');
+}
+
+const PUBLIC_BASE_PATH = normalizeBasePath(process.env.BASE_PATH || '');
+const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN || '';
+
 const db = new Database(path.join(__dirname, 'cache.db'));
 db.exec(`CREATE TABLE IF NOT EXISTS parse_cache (
   address TEXT PRIMARY KEY,
@@ -39,18 +47,42 @@ db.exec(`CREATE TABLE IF NOT EXISTS login_logs (
 db.pragma('journal_mode = WAL');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-prod',
+  proxy: true,
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
 app.use(express.static(path.join(__dirname)));
+
+function buildPublicUrl(req, pathname) {
+  const protocol = (req.get('x-forwarded-proto') || req.protocol || 'http').split(',')[0].trim();
+  const host = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
+  const url = new URL(PUBLIC_ORIGIN || `${protocol}://${host}`);
+  url.pathname = `${PUBLIC_BASE_PATH}${pathname}`;
+  return url.toString();
+}
+
+function normalizeRedirectPath(redirect = '/') {
+  try {
+    const parsed = new URL(redirect, 'https://local.invalid');
+    parsed.pathname = parsed.pathname.replace(/\/{2,}/g, '/');
+    if (PUBLIC_BASE_PATH && !parsed.pathname.startsWith(`${PUBLIC_BASE_PATH}/`) && parsed.pathname !== PUBLIC_BASE_PATH) {
+      return `${PUBLIC_BASE_PATH}/`;
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return `${PUBLIC_BASE_PATH || ''}/`;
+  }
+}
 
 function requireAuth(req, res, next) {
   if (!req.session.user) {
@@ -420,14 +452,12 @@ const loginStates = new Map();
 
 app.get('/api/auth/dingtalk/url', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
-  const redirect = req.query.redirect || '/';
+  const redirect = normalizeRedirectPath(req.query.redirect || `${PUBLIC_BASE_PATH || ''}/`);
   loginStates.set(state, { redirect, created: Date.now() });
 
   setTimeout(() => loginStates.delete(state), 5 * 60 * 1000);
 
-  const host = req.get('host');
-  const protocol = req.get('x-forwarded-proto') || req.protocol;
-  const callbackUrl = `${protocol}://${host}/gis/api/auth/dingtalk/callback`;
+  const callbackUrl = buildPublicUrl(req, '/api/auth/dingtalk/callback');
   const url = dingtalk.getQrConnectUrl(callbackUrl, state);
 
   res.json({ url, state });
@@ -473,6 +503,12 @@ app.get('/api/auth/dingtalk/callback', async (req, res) => {
 
     res.redirect(stateData.redirect);
   } catch (e) {
+    if (e.dingTalkResponse) {
+      console.error('钉钉登录失败详情:', JSON.stringify({
+        status: e.dingTalkStatus,
+        response: e.dingTalkResponse
+      }, null, 2));
+    }
     console.error('钉钉登录失败:', e);
     res.status(500).send('登录失败: ' + e.message);
   }

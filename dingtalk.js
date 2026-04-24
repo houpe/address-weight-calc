@@ -6,6 +6,27 @@ const DINGTALK_APP_SECRET = process.env.DINGTALK_APP_SECRET;
 let cachedToken = null;
 let tokenExpireTime = 0;
 
+function normalizeDingTalkError(error) {
+  const dingTalkResponse = error?.response?.data;
+  const errorCode = error?.response?.data?.code;
+  const normalizedError = new Error(error?.response?.data?.message || error.message);
+  normalizedError.dingTalkStatus = error?.response?.status;
+  normalizedError.dingTalkResponse = dingTalkResponse;
+
+  if (errorCode === 'Forbidden.AccessDenied.AccessTokenPermissionDenied') {
+    normalizedError.message = '钉钉后台缺少网页登录所需权限，请检查 Contact.User.Read 和 Contact.User.mobile 是否已开通并发布生效';
+    return normalizedError;
+  }
+
+  const message = error?.response?.data?.message;
+  if (message) {
+    normalizedError.message = message;
+    return normalizedError;
+  }
+
+  return error;
+}
+
 async function getAccessToken() {
   const now = Date.now();
   if (cachedToken && now < tokenExpireTime) {
@@ -74,33 +95,37 @@ function getQrConnectUrl(redirectUri, state) {
 }
 
 async function getUserByCode(code) {
-  const tokenRes = await axios.post(
-    'https://api.dingtalk.com/v1.0/oauth2/userAccessToken',
-    {
-      clientId: DINGTALK_APP_KEY,
-      clientSecret: DINGTALK_APP_SECRET,
-      code: code,
-      grantType: 'authorization_code'
-    },
-    { timeout: 10000 }
-  );
+  try {
+    const tokenRes = await axios.post(
+      'https://api.dingtalk.com/v1.0/oauth2/userAccessToken',
+      {
+        clientId: DINGTALK_APP_KEY,
+        clientSecret: DINGTALK_APP_SECRET,
+        code: code,
+        grantType: 'authorization_code'
+      },
+      { timeout: 10000 }
+    );
 
-  const accessToken = tokenRes.data.accessToken;
+    const accessToken = tokenRes.data.accessToken;
 
-  const userRes = await axios.get(
-    'https://api.dingtalk.com/v1.0/contact/users/me',
-    {
-      headers: { 'x-acs-dingtalk-access-token': accessToken },
-      timeout: 10000
-    }
-  );
+    const userRes = await axios.get(
+      'https://api.dingtalk.com/v1.0/contact/users/me',
+      {
+        headers: { 'x-acs-dingtalk-access-token': accessToken },
+        timeout: 10000
+      }
+    );
 
-  return {
-    userId: userRes.data.openId,
-    name: userRes.data.nickName,
-    avatar: userRes.data.avatarUrl,
-    unionid: userRes.data.unionId
-  };
+    return {
+      userId: userRes.data.openId,
+      name: userRes.data.nickName,
+      avatar: userRes.data.avatarUrl,
+      unionid: userRes.data.unionId
+    };
+  } catch (error) {
+    throw normalizeDingTalkError(error);
+  }
 }
 
 module.exports = {

@@ -23,11 +23,21 @@
     .logo { font-size: 32px; margin-bottom: 8px; }
     h1 { font-size: 18px; margin-bottom: 4px; }
     .subtitle { font-size: 12px; color: var(--text-dim); margin-bottom: 24px; }
-    #qr-container { margin: 20px 0; min-height: 400px; background: #fff; border-radius: 8px; overflow: hidden; }
-    #qr-container iframe { width: 100%; height: 400px; border: none; }
-    .loading { color: var(--text-dim); font-size: 13px; padding: 80px 0; }
+    .login-btn {
+      display: inline-block; padding: 10px 32px; background: #3370FF;
+      color: #fff; border: none; border-radius: 8px; font-size: 14px;
+      cursor: pointer; text-decoration: none; margin: 16px 0;
+    }
+    .login-btn:hover { background: #2858CC; }
+    .loading { color: var(--text-dim); font-size: 13px; }
     .error { color: #f87171; font-size: 13px; margin-top: 16px; }
     .hint { font-size: 11px; color: var(--text-dim); margin-top: 16px; }
+    .mobile-tip { font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-top: 8px; }
+    .secondary-btn {
+      display: inline-block; padding: 8px 20px; background: transparent;
+      color: var(--accent); border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; cursor: pointer; text-decoration: none; margin-top: 8px;
+    }
     .back-link {
       display: block; margin-top: 16px; color: var(--accent);
       text-decoration: none; font-size: 13px;
@@ -39,7 +49,9 @@
     <div class="logo">📍</div>
     <h1>地址坐标可靠度计算器</h1>
     <div class="subtitle">请使用钉钉扫码登录</div>
-    <div id="qr-container"><div class="loading">加载中...</div></div>
+    <div id="login-area">
+      <button class="login-btn" onclick="doLogin()">登录钉钉</button>
+    </div>
     <div id="error-msg" class="error" style="display:none;"></div>
     <div class="hint">仅限企业内部员工使用</div>
     <a id="back-link" class="back-link" href="/">返回首页</a>
@@ -49,8 +61,20 @@
     const BASE_PATH = window.location.pathname.replace(/\/login\.html(\?.*)?$/, '');
     window.BASE_PATH = BASE_PATH;
 
-    const redirect = new URLSearchParams(location.search).get('redirect') || BASE_PATH + '/';
+    function normalizeRedirectUrl(value) {
+      if (!value) return BASE_PATH + '/';
+      try {
+        const url = new URL(value, location.origin);
+        url.pathname = url.pathname.replace(/\/{2,}/g, '/');
+        return url.origin === location.origin ? url.pathname + url.search + url.hash : BASE_PATH + '/';
+      } catch {
+        return BASE_PATH + '/';
+      }
+    }
+
+    const redirect = normalizeRedirectUrl(new URLSearchParams(location.search).get('redirect'));
     let isInDingTalk = false;
+    let isMobile = false;
 
     document.getElementById('back-link').href = BASE_PATH + '/';
 
@@ -59,19 +83,87 @@
       return ua.includes('dingtalk');
     }
 
+    function checkMobileEnv() {
+      const ua = navigator.userAgent.toLowerCase();
+      return /iphone|ipad|ipod|android|mobile/.test(ua);
+    }
+
+    function getDingTalkOpenUrl() {
+      const loginUrl = new URL(location.href);
+      return 'https://applink.dingtalk.com/page/link?url=' + encodeURIComponent(loginUrl.toString());
+    }
+
+    function openInDingTalk() {
+      location.href = getDingTalkOpenUrl();
+      setTimeout(() => {
+        showError('如果没有自动打开钉钉，请确认手机已安装钉钉，或复制当前链接到钉钉内打开。');
+      }, 1800);
+    }
+
+    async function startWebLogin() {
+      const res = await fetch(BASE_PATH + '/api/auth/dingtalk/url?redirect=' + encodeURIComponent(redirect));
+      const data = await res.json();
+      location.href = data.url;
+    }
+
+    function getDingTalkClient() {
+      const client = window.dd || window.dt || window.dingtalk;
+      if (client && client.runtime && client.runtime.permission) {
+        return client;
+      }
+      return null;
+    }
+
+    function waitForDingTalkClient(timeout = 3000) {
+      const startedAt = Date.now();
+      return new Promise(resolve => {
+        const timer = setInterval(() => {
+          const client = getDingTalkClient();
+          if (client || Date.now() - startedAt >= timeout) {
+            clearInterval(timer);
+            resolve(client);
+          }
+        }, 100);
+      });
+    }
+
+    function requestDingTalkAuthCode(client) {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = fn => value => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutTimer);
+          fn(value);
+        };
+        const timeoutTimer = setTimeout(() => finish(reject)(new Error('钉钉免登初始化超时')), 3000);
+        const run = () => {
+          client.runtime.permission.requestAuthCode({
+            onSuccess: res => finish(resolve)(res.code),
+            onFail: err => finish(reject)(err)
+          });
+        };
+
+        if (typeof client.ready === 'function') {
+          client.ready(run);
+          if (typeof client.error === 'function') {
+            client.error(finish(reject));
+          }
+        } else {
+          run();
+        }
+      });
+    }
+
     async function tryAutoLogin() {
       try {
-        const dt = window.dt || window.dingtalk || {};
-        if (!dt.runtime || !dt.runtime.permission) {
-          throw new Error('钉钉环境不可用');
+        const client = await waitForDingTalkClient();
+        if (!client) {
+          await startWebLogin();
+          return;
         }
 
-        const code = await new Promise((resolve, reject) => {
-          dt.runtime.permission.requestAuthCode({
-            onSuccess: res => resolve(res.code),
-            onFail: err => reject(err)
-          });
-        });
+        const code = await requestDingTalkAuthCode(client);
 
         const res = await fetch(BASE_PATH + '/api/auth/dingtalk/auto', {
           method: 'POST',
@@ -87,34 +179,57 @@
         }
       } catch (e) {
         console.error('免登失败:', e);
-        showQrLogin();
+        try {
+          await startWebLogin();
+        } catch (fallbackError) {
+          showError('登录失败: ' + (fallbackError.message || e.message));
+        }
       }
     }
 
-    async function showQrLogin() {
-      try {
-        const res = await fetch(BASE_PATH + '/api/auth/dingtalk/url?redirect=' + encodeURIComponent(redirect));
-        const data = await res.json();
-
-        const container = document.getElementById('qr-container');
-        container.innerHTML = '<iframe src="' + data.url + '" allow="camera" scrolling="no"></iframe>';
-      } catch (e) {
-        document.getElementById('error-msg').textContent = '加载登录二维码失败: ' + e.message;
-        document.getElementById('error-msg').style.display = 'block';
+    async function doLogin() {
+      if (isInDingTalk) {
+        await tryAutoLogin();
+        return;
       }
+
+      if (isMobile) {
+        openInDingTalk();
+        return;
+      }
+
+      try {
+        await startWebLogin();
+      } catch (e) {
+        showError('获取登录链接失败: ' + e.message);
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('error-msg').textContent = msg;
+      document.getElementById('error-msg').style.display = 'block';
     }
 
     async function init() {
       isInDingTalk = checkDingTalkEnv();
+      isMobile = checkMobileEnv();
 
       if (isInDingTalk) {
+        const area = document.getElementById('login-area');
+        area.innerHTML = '<div class="loading">正在跳转钉钉免登...</div>';
         const script = document.createElement('script');
         script.src = 'https://g.alicdn.com/dingding/dingtalk-jsapi/2.10.3/dingtalk.open.js';
         script.onload = tryAutoLogin;
-        script.onerror = showQrLogin;
+        script.onerror = () => showError('钉钉JSAPI加载失败');
         document.body.appendChild(script);
+      } else if (isMobile) {
+        document.querySelector('.subtitle').textContent = '请在手机钉钉内完成登录';
+        document.getElementById('login-area').innerHTML =
+          '<button class="login-btn" onclick="doLogin()">打开钉钉登录</button>' +
+          '<div class="mobile-tip">手机浏览器会先唤起钉钉，再自动完成登录。</div>' +
+          '<button class="secondary-btn" onclick="location.href=getDingTalkOpenUrl()">手动打开钉钉</button>';
       } else {
-        showQrLogin();
+        document.getElementById('login-area').innerHTML = '<button class="login-btn" onclick="doLogin()">登录钉钉</button>';
       }
     }
 
