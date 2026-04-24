@@ -195,23 +195,47 @@
     .address-mode { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
     
     /* Mobile Responsive */
-    @media (max-width: 768px) {
+    @media screen and (max-width: 768px) {
+      /* Force full height reset for mobile scroll */
       html, body { height: auto !important; overflow: auto !important; }
       body { padding: 8px; }
+      
+      /* Reset container height */
       .container { height: auto !important; gap: 8px; }
-      .header h1 { font-size: 16px; }
+      
+      /* Hide subtitle to save space */
       .header .sub { display: none; }
       
-      .main { flex-direction: column !important; height: auto !important; overflow: visible !important; }
-      .col-input { width: 100% !important; min-height: auto !important; flex: none !important; }
-      .col-result { width: 100% !important; max-height: none !important; overflow: visible !important; flex: none !important; }
-      .col-map { width: 100% !important; height: 350px !important; min-height: 350px !important; flex: none !important; }
+      /* Vertical stacking with high specificity */
+      .main { 
+        flex-direction: column !important; 
+        height: auto !important; 
+        overflow: visible !important;
+        display: block !important; /* Break flex context if needed, though column flex is usually enough */
+      }
       
+      /* Force full width and remove flex constraints */
+      .col-input, .col-result, .col-map { 
+        width: 100% !important; 
+        max-width: 100% !important;
+        flex: none !important;
+        min-height: auto !important; 
+        display: block !important;
+        margin-bottom: 12px;
+      }
+      
+      /* Specific map height */
+      .col-map { height: 350px !important; min-height: 350px !important; }
+      .col-result { overflow: visible !important; }
+      
+      /* Method selector wrapping */
       .method-selector { flex-wrap: wrap; }
       .method-btn { flex: 1 1 45%; margin-bottom: 4px; }
       
+      /* Info grid single column */
       .info-grid { grid-template-columns: 1fr; }
       
+      /* Input area adjustments */
       #input-address { min-height: 80px; max-height: 120px; }
       .card { padding: 12px; }
     }
