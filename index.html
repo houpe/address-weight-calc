@@ -196,51 +196,31 @@
     
     /* Mobile Responsive */
     @media screen and (max-width: 768px) {
-      /* Force full height reset for mobile scroll */
       html, body { height: auto !important; overflow: auto !important; }
       body { padding: 8px; }
-      
-      /* Reset container height */
       .container { height: auto !important; gap: 8px; }
-      
-      /* Hide subtitle to save space */
       .header .sub { display: none; }
       
-      /* Vertical stacking with high specificity */
-      .main { 
-        flex-direction: column !important; 
-        height: auto !important; 
-        overflow: visible !important;
-      }
+      .main { flex-direction: column !important; height: auto !important; overflow: visible !important; }
       
-      /* Force full width and remove flex constraints */
-      .col-input, .col-result, .col-map { 
-        width: 100% !important; 
-        max-width: 100% !important;
-        flex: none !important;
-        min-height: auto !important; 
-        display: block !important;
-        margin-bottom: 8px;
-      }
+      /* Mobile order: Input -> Map -> Result -> Detail */
+      .col-input { order: 1; width: 100% !important; flex: none !important; }
+      .col-map { order: 2; width: 100% !important; flex: none !important; height: 280px !important; min-height: 280px !important; }
+      .col-result { order: 3; width: 100% !important; flex: none !important; }
+      .col-detail { order: 4; width: 100% !important; flex: 1 1 auto !important; min-height: 200px !important; }
       
-      /* Specific order for mobile: Input -> Result -> Map */
-      .col-input { order: 0; }
-      .col-result { order: 1; overflow: visible !important; }
-      .col-map { order: 2; height: 250px !important; min-height: 250px !important; }
-      
-      /* Map controls adjustment */
-      .col-map .map-header { flex-wrap: wrap; gap: 4px; padding: 6px 10px; }
+      /* Map controls hidden on mobile */
       .col-map .map-header > div:last-child { display: none !important; }
-      #map { height: calc(100% - 35px) !important; min-height: 215px !important; }
+      .col-map .map-header { padding: 8px 12px; }
+      #map { height: calc(100% - 40px) !important; min-height: 240px !important; }
       
-      /* Method selector wrapping */
+      /* Result card should show all content */
+      .result-card { flex: 0 0 auto !important; }
+      #result-content { overflow: visible !important; }
+      
       .method-selector { flex-wrap: wrap; }
       .method-btn { flex: 1 1 45%; margin-bottom: 4px; }
-      
-      /* Info grid single column */
       .info-grid { grid-template-columns: 1fr; }
-      
-      /* Input area adjustments */
       #input-address { min-height: 60px; max-height: 80px; }
       .card { padding: 12px; }
     }
@@ -324,13 +304,16 @@
       </div>
 
       <div class="col-result">
-        <div class="card" style="flex:0.5;">
+        <div class="card result-card" style="flex:0 0 auto;">
           <div class="card-title">计算结果</div>
           <div id="result-content">
             <div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>
           </div>
         </div>
-        <div class="card" style="flex:1; min-height: 0;">
+      </div>
+
+      <div class="col-detail">
+        <div class="card detail-card" style="flex:1; min-height: 0;">
           <div class="card-title">来源明细</div>
           <div id="source-detail" style="overflow-y:auto; flex:1; min-height:0;">
             <div class="empty-state"><div class="text">暂无数据</div></div>
