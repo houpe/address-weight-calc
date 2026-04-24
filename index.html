@@ -49,13 +49,7 @@
       outline: none; resize: none; min-height: 60px; max-height: 80px;
     }
     #input-address:focus { border-color: var(--accent); }
-    #input-coords {
-      width: 100%; flex: 1; min-height: 0; background: var(--bg);
-      border: 1px solid var(--border); border-radius: 6px; color: var(--text);
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-      font-size: 11px; padding: 8px; resize: none; outline: none;
-    }
-    #input-coords:focus { border-color: var(--accent); }
+    
     #formatted-display {
       background: var(--bg); border-radius: 6px; padding: 6px 8px;
       font-size: 11px; color: var(--accent); min-height: 24px; word-break: break-all;
@@ -198,8 +192,7 @@
     .map-toggle.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
     .map-container { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
     .map-container.hidden { display: none; }
-    .coord-mode, .address-mode { display: none; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
-    .coord-mode.active, .address-mode.active { display: flex; }
+    .address-mode { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
   </style>
 </head>
 <body>
@@ -212,28 +205,6 @@
     <div class="main">
       <div class="col-input">
         <div class="card" style="flex:1;">
-          <div class="card-title">计算模式</div>
-          <div class="method-selector">
-            <button class="method-btn active" id="mode-addr" onclick="setMode('address')">地址<span class="desc">自动解析</span></button>
-            <button class="method-btn" id="mode-coord" onclick="setMode('coord')">坐标<span class="desc">手动输入</span></button>
-          </div>
-
-          <div class="coord-mode active" id="coord-mode">
-            <div class="card-title">计算方法</div>
-            <div class="method-selector">
-              <button class="method-btn active" id="method-5" onclick="setMethod('5coord')">5坐标<span class="desc">全源加权</span></button>
-              <button class="method-btn" id="method-2" onclick="setMethod('2coord')">2坐标<span class="desc">三通 GEO</span></button>
-            </div>
-            <div class="input-area">
-              <div class="card-title">输入坐标</div>
-              <textarea id="input-coords"></textarea>
-            </div>
-            <div class="hint">
-              格式：<code>来源 经度,纬度</code>（Tab/空格分隔）<br>
-              <span id="hint-sources"></span>
-            </div>
-          </div>
-
           <div class="address-mode" id="address-mode">
             <div class="input-area">
               <div class="card-title">输入地址</div>
@@ -335,23 +306,11 @@
       } catch {}
     }
 
-    let currentMode = 'coord';
-    let currentMethod = '5coord';
     let mapInstance = null, mapMarkers = [], mapVisible = true, amapLoaded = false;
     let lastResult = null, lastParsers = [], lastFormatted = '', lastRawData = {};
     let formattedEdited = false;
 
     const METHOD_CONFIG = {
-      '5coord': {
-        label: '5坐标（全源加权）',
-        sources: ['zt_pro','amap_poi','baidu_poi','tian_poi','amap_geo','baidu_geo','tian_geo','manual'],
-        weights: {'zt_pro':4,'amap_poi':3,'baidu_poi':3,'tian_poi':3,'amap_geo':2,'baidu_geo':2,'tian_geo':2,'manual':3}
-      },
-      '2coord': {
-        label: '2坐标（三通GEO）',
-        sources: ['zt_pro','amap_geo','baidu_geo','manual'],
-        weights: {'zt_pro':4,'amap_geo':2,'baidu_geo':2,'manual':3}
-      },
       'address': {
         label: '地址解析（6源）',
         sources: ['zt_pro','amap_poi','baidu_poi','amap_geo','baidu_geo','group_parse'],
@@ -359,17 +318,7 @@
       }
     };
 
-    const SOURCE_MAP = {
-      '中通':'zt_pro','中通pro':'zt_pro','中通_pro':'zt_pro','中通PRO':'zt_pro',
-      '高德poi':'amap_poi','高德POI':'amap_poi','23系统':'amap_poi',
-      '百度poi':'baidu_poi','百度POI':'baidu_poi','24系统':'baidu_poi',
-      '天地图poi':'tian_poi','天地图POI':'tian_poi',
-      '高德geo':'amap_geo','高德GEO':'amap_geo','高德':'amap_geo',
-      '百度geo':'baidu_geo','百度GEO':'baidu_geo','百度':'baidu_geo',
-      '集团解析':'group_parse','集团':'group_parse','集团poi':'group_parse',
-      '天地图geo':'tian_geo','天地图GEO':'tian_geo',
-      '手选':'manual','manual':'manual',
-    };
+    
 
     const SOURCE_ABBREV = {'zt_pro':'中','amap_poi':'高P','baidu_poi':'百P','tian_poi':'天','amap_geo':'高','baidu_geo':'百','tian_geo':'天','manual':'手','baidu_agg':'百聚','group_parse':'集'};
     const SOURCE_COLORS = {'zt_pro':'#8b5cf6','amap_poi':'#06b6d4','baidu_poi':'#e11d48','tian_poi':'#a78bfa','amap_geo':'#0ea5e9','baidu_geo':'#fb923c','tian_geo':'#c084fc','manual':'#ec4899','baidu_agg':'#f43f5e','group_parse':'#22c55e'};
@@ -390,63 +339,7 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function setMode(mode) {
-      currentMode = mode;
-      document.getElementById('mode-coord').classList.toggle('active', mode === 'coord');
-      document.getElementById('mode-addr').classList.toggle('active', mode === 'address');
-      document.getElementById('coord-mode').classList.toggle('active', mode === 'coord');
-      document.getElementById('address-mode').classList.toggle('active', mode === 'address');
-      if (mode === 'coord') {
-        document.getElementById('method-5').style.display = '';
-        document.getElementById('method-2').style.display = '';
-        setMethod(currentMethod);
-      } else {
-        document.getElementById('method-5').style.display = 'none';
-        document.getElementById('method-2').style.display = 'none';
-        currentMethod = 'address';
-      }
-    }
-
-    function setMethod(m) {
-      currentMethod = m;
-      document.getElementById('method-5').classList.toggle('active', m==='5coord');
-      document.getElementById('method-2').classList.toggle('active', m==='2coord');
-      const cfg = METHOD_CONFIG[m];
-        const lm = {'zt_pro':'中通_PRO','amap_poi':'高德poi','baidu_poi':'百度poi','tian_poi':'天地图poi','amap_geo':'高德GEO','baidu_geo':'百度GEO','tian_geo':'天地图GEO','manual':'手选','group_parse':'集团解析'};
-      document.getElementById('hint-sources').textContent = '支持: ' + cfg.sources.map(s=>lm[s]||s).join('/');
-    }
-
-    function getMethodConfig() { return METHOD_CONFIG[currentMethod]; }
-
-    function normalizeSource(name) {
-      const key = name.trim().toLowerCase();
-      for (const [match, source] of Object.entries(SOURCE_MAP)) {
-        if (key === match.toLowerCase() || key.includes(match.toLowerCase())) return source;
-      }
-      return null;
-    }
-
-    function parseInput(text) {
-      const cfg = getMethodConfig();
-      const lines = text.trim().split('\n').filter(l => l.trim());
-      const parsers = [], seen = new Set();
-      for (const line of lines) {
-        let parts;
-        if (line.includes('\t')) parts = line.split('\t').map(s=>s.trim());
-        else if (line.includes(' ')) { const idx = line.search(/[\d-]/); if(idx>0) parts=[line.slice(0,idx).trim(),line.slice(idx).trim()]; else continue; }
-        else continue;
-        if (parts.length < 2) continue;
-        const source = normalizeSource(parts[0]);
-        if (!source || !cfg.sources.includes(source) || seen.has(source)) continue;
-        const cp = parts[1].split(/[,，\s]+/).filter(Boolean);
-        if (cp.length < 2) continue;
-        const lng = parseFloat(cp[0]), lat = parseFloat(cp[1]);
-        if (isNaN(lng)||isNaN(lat)) continue;
-        seen.add(source);
-        parsers.push({source, lat, lng, weight: cfg.weights[source]||2});
-      }
-      return parsers;
-    }
+    
 
     function calculateReliability(parsers, tau, outlierDist) {
       if (!parsers.length) return {score:0,msg:'无有效解析数据'};
@@ -478,7 +371,7 @@
     function renderResult(result) {
       const card=document.getElementById('result-content'), detailCard=document.getElementById('source-detail');
       const circ=2*Math.PI*54, offset=circ*(1-result.score), color=getScoreColor(result.score), verdict=getVerdict(result.score, result.msg);
-      const label = currentMode === 'address' ? '地址解析（6源）' : getMethodConfig().label;
+      const label = '地址解析（6源）';
       card.innerHTML=`
         <div class="result-panel">
           <div class="method-badge">${label}</div>
@@ -821,95 +714,73 @@
       const outlier=parseFloat(document.getElementById('outlier').value)||50000;
       const btn=document.getElementById('btn-calc');
 
-      if (currentMode === 'address') {
-        const rawAddress = document.getElementById('input-address').value.trim();
-        if (!rawAddress) { alert('请输入地址'); return; }
-        
-        const parseMode = document.querySelector('input[name="parse-mode"]:checked').value;
-        const formattedInput = document.getElementById('formatted-display');
-        
-        btn.disabled = true; btn.textContent = '解析中';
-        document.getElementById('result-content').innerHTML = '<div class="loading">正在解析地址</div>';
-        document.getElementById('source-detail').innerHTML = '';
+      const rawAddress = document.getElementById('input-address').value.trim();
+      if (!rawAddress) { alert('请输入地址'); return; }
+      
+      const parseMode = document.querySelector('input[name="parse-mode"]:checked').value;
+      const formattedInput = document.getElementById('formatted-display');
+      
+      btn.disabled = true; btn.textContent = '解析中';
+      document.getElementById('result-content').innerHTML = '<div class="loading">正在解析地址</div>';
+      document.getElementById('source-detail').innerHTML = '';
 
-        try {
-          let parseData, finalFormatted;
+      try {
+        let parseData, finalFormatted;
 
-          if (parseMode === 'formatted') {
-            // Step 1: Standardize
-            const stdResp = await fetch(`${API_BASE}/api/standardize`, {
-              method: 'POST', headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({ address: rawAddress })
-            });
-            const stdData = await stdResp.json();
-            finalFormatted = stdData.formatted;
-            formattedInput.value = finalFormatted;
-            formattedInput.disabled = true;
-          } else {
-            finalFormatted = rawAddress;
-            formattedInput.value = rawAddress;
-            formattedInput.disabled = false;
-          }
-
-          const cached = await getCached(finalFormatted);
-          if (cached.found) {
-            parseData = cached.parse;
-          } else {
-            const parseResp = await fetch(`${API_BASE}/api/parse`, {
-              method: 'POST', headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({ formatted: finalFormatted })
-            });
-            parseData = await parseResp.json();
-            setCache(finalFormatted, { formatted: finalFormatted }, parseData);
-          }
-
-          lastFormatted = finalFormatted;
-          lastRawData = parseData.parsers;
-
-          const parsers = [];
-          for (const [source, data] of Object.entries(parseData.parsers)) {
-            if (data.lat && data.lng && data.lat !== 0 && data.lng !== 0) {
-              parsers.push({ source, lat: data.lat, lng: data.lng, weight: METHOD_CONFIG.address.weights[source] || 2 });
-            }
-          }
-
-          const result = calculateReliability(parsers, tau, outlier);
-          lastParsers = parsers;
-          renderResult(result);
-          renderMap(result, parsers);
-          saveAddressHistory(rawAddress);
-        } catch (e) {
-          document.getElementById('result-content').innerHTML = `<div class="empty-state"><div class="icon">&#9888;</div><div class="text">解析失败: ${e.message}</div></div>`;
+        if (parseMode === 'formatted') {
+          const stdResp = await fetch(`${API_BASE}/api/standardize`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ address: rawAddress })
+          });
+          const stdData = await stdResp.json();
+          finalFormatted = stdData.formatted;
+          formattedInput.value = finalFormatted;
+          formattedInput.disabled = true;
+        } else {
+          finalFormatted = rawAddress;
+          formattedInput.value = rawAddress;
+          formattedInput.disabled = false;
         }
-        btn.disabled = false; btn.textContent = '计算';
-      } else {
-        lastFormatted = '';
-        lastRawData = {};
-        document.getElementById('formatted-display').value = '-';
-        const text = document.getElementById('input-coords').value;
-        const parsers = parseInput(text);
+
+        const cached = await getCached(finalFormatted);
+        if (cached.found) {
+          parseData = cached.parse;
+        } else {
+          const parseResp = await fetch(`${API_BASE}/api/parse`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ formatted: finalFormatted })
+          });
+          parseData = await parseResp.json();
+          setCache(finalFormatted, { formatted: finalFormatted }, parseData);
+        }
+
+        lastFormatted = finalFormatted;
+        lastRawData = parseData.parsers;
+
+        const parsers = [];
+        for (const [source, data] of Object.entries(parseData.parsers)) {
+          if (data.lat && data.lng && data.lat !== 0 && data.lng !== 0) {
+            parsers.push({ source, lat: data.lat, lng: data.lng, weight: METHOD_CONFIG.address.weights[source] || 2 });
+          }
+        }
+
         const result = calculateReliability(parsers, tau, outlier);
+        lastParsers = parsers;
         renderResult(result);
         renderMap(result, parsers);
+        saveAddressHistory(rawAddress);
+      } catch (e) {
+        document.getElementById('result-content').innerHTML = `<div class="empty-state"><div class="icon">&#9888;</div><div class="text">解析失败: ${e.message}</div></div>`;
       }
+      btn.disabled = false; btn.textContent = '计算';
     }
 
     function loadDefault() {
-      if (currentMode === 'coord') {
-        document.getElementById('input-coords').value=`23系统\t121.50868589535285,38.84132130739873
-24系统\t121.5088580443412,38.840767298298786
-百度GEO\t121.5088580443412,38.840767298298786
-高德GEO\t121.508818,38.840953
-中通_PRO\t121.50868589535285,38.84132130739873
-手选\t121.50868589535285,38.84132130739873`;
-      } else {
-        const history = loadAddressHistory();
-        document.getElementById('input-address').value = history.length > 0 ? history[0] : '广东省深圳市宝安区鹤州路38号';
-      }
+      const history = loadAddressHistory();
+      document.getElementById('input-address').value = history.length > 0 ? history[0] : '广东省深圳市宝安区鹤州路38号';
     }
 
     function clearAll() {
-      document.getElementById('input-coords').value='';
       document.getElementById('input-address').value='';
       document.getElementById('formatted-display').textContent='-';
       document.getElementById('result-content').innerHTML=`<div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>`;
@@ -985,8 +856,6 @@
       formattedEdited = true;
     });
 
-    setMode('address');
-    setMethod('5coord');
     loadDefault();
     setTimeout(refreshHistory, 100);
   </script>
