@@ -159,6 +159,20 @@ app.post('/api/standardize', async (req, res) => {
   }
 });
 
+app.get('/api/parse51', async (req, res) => {
+  const { address } = req.query;
+  if (!address) return res.status(400).json({ error: '地址不能为空' });
+  try {
+    const resp = await axios.get('https://zmap-openapi.gw.zt-express.com/address/parse51', {
+      params: { address },
+      timeout: 10000
+    });
+    res.json(resp.data);
+  } catch (e) {
+    res.json({ code: 500, msg: e.message, data: null });
+  }
+});
+
 app.post('/api/parse', async (req, res) => {
   const { formatted, city } = req.body;
   if (!formatted) return res.status(400).json({ error: '格式化地址不能为空' });

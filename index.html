@@ -214,8 +214,13 @@
               </div>
               <div style="font-size:11px;color:var(--text-dim);margin-top:6px">
                 解析地址：
-                <label style="margin-right:12px;cursor:pointer"><input type="radio" name="parse-mode" value="raw" checked style="vertical-align:middle"> 原地址</label>
-                <label style="cursor:pointer"><input type="radio" name="parse-mode" value="formatted" style="vertical-align:middle"> 分词地址</label>
+                <label style="margin-right:12px;cursor:pointer"><input type="radio" name="parse-mode" value="raw" checked onchange="toggleParseLogic()" style="vertical-align:middle"> 原地址</label>
+                <label style="cursor:pointer"><input type="radio" name="parse-mode" value="formatted" onchange="toggleParseLogic()" style="vertical-align:middle"> 分词地址</label>
+              </div>
+              <div id="parse-logic-selector" style="font-size:11px;color:var(--text-dim);margin-top:4px;display:none">
+                分词逻辑：
+                <label style="margin-right:12px;cursor:pointer"><input type="radio" name="parse-logic" value="logic1" checked style="vertical-align:middle"> 逻辑1</label>
+                <label style="cursor:pointer"><input type="radio" name="parse-logic" value="logic2" style="vertical-align:middle"> 逻辑2</label>
               </div>
             </div>
             <div class="card" style="padding:8px 10px;">
@@ -409,7 +414,7 @@
       html+=`</tbody></table>`;
 
       // Address mode: show detailed parsing results
-      if (currentMode === 'address' && lastRawData && Object.keys(lastRawData).length > 0) {
+      if (lastRawData && Object.keys(lastRawData).length > 0) {
         html += `<div style="margin-top:10px"><div class="card-title" style="margin-bottom:6px">解析详情</div>`;
         // 集团解析 details
         const group = lastRawData.group_parse;
@@ -728,12 +733,39 @@
         let parseData, finalFormatted;
 
         if (parseMode === 'formatted') {
-          const stdResp = await fetch(`${API_BASE}/api/standardize`, {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ address: rawAddress })
-          });
-          const stdData = await stdResp.json();
-          finalFormatted = stdData.formatted;
+          const parseLogic = document.querySelector('input[name="parse-logic"]:checked').value;
+          
+          if (parseLogic === 'logic1') {
+            const stdResp = await fetch(`${API_BASE}/api/standardize`, {
+              method: 'POST', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ address: rawAddress })
+            });
+            const stdData = await stdResp.json();
+            finalFormatted = stdData.formatted;
+          } else {
+            const parse51Resp = await fetch(`${API_BASE}/api/parse51?address=${encodeURIComponent(rawAddress)}`);
+            const parse51Data = await parse51Resp.json();
+            
+            if (parse51Data.code === 200 && parse51Data.data) {
+              const parts = { province: '', cities: [], township: '', detail: '' };
+              
+              for (const item of parse51Data.data) {
+                if (item.label === 'province') {
+                  parts.province = item.name;
+                } else if (item.label === 'city') {
+                  parts.cities.push(item.name);
+                } else if (item.label === 'township') {
+                  parts.township = item.name;
+                } else if (['road', 'poi', 'houseNumber', 'room'].includes(item.label)) {
+                  parts.detail += item.name;
+                }
+              }
+              
+              finalFormatted = (parts.province + parts.cities.join('') + parts.township + parts.detail) || rawAddress;
+            } else {
+              finalFormatted = rawAddress;
+            }
+          }
           formattedInput.value = finalFormatted;
           formattedInput.disabled = true;
         } else {
@@ -773,6 +805,12 @@
         document.getElementById('result-content').innerHTML = `<div class="empty-state"><div class="icon">&#9888;</div><div class="text">解析失败: ${e.message}</div></div>`;
       }
       btn.disabled = false; btn.textContent = '计算';
+    }
+
+    function toggleParseLogic() {
+      const parseMode = document.querySelector('input[name="parse-mode"]:checked').value;
+      const logicSelector = document.getElementById('parse-logic-selector');
+      logicSelector.style.display = parseMode === 'formatted' ? 'block' : 'none';
     }
 
     function loadDefault() {
