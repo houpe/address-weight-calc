@@ -37,7 +37,7 @@ node server.js
 ssh root@www.houpe.top
 
 # 进入项目目录
-cd /path/to/project
+cd /www/wwwroot/address-weight-calc/
 
 # 启动服务
 node server.js
@@ -75,7 +75,7 @@ GROUP_APP_SECRET=集团AppSecret
 ```bash
 ssh root@www.houpe.top
 
-cd /path/to/project
+cd /www/wwwroot/address-weight-calc/
 node -e "
 const axios = require('axios');
 const crypto = require('crypto');

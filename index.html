@@ -247,8 +247,6 @@
           </div>
           <div class="actions">
             <button class="btn btn-primary" id="btn-calc" onclick="calculate()">计算</button>
-            <button class="btn btn-secondary" id="btn-default" onclick="loadDefault()">默认</button>
-            <button class="btn btn-secondary" onclick="clearAll()">清空</button>
           </div>
         </div>
       </div>
@@ -747,21 +745,11 @@
             const parse51Data = await parse51Resp.json();
             
             if (parse51Data.code === 200 && parse51Data.data) {
-              const parts = { province: '', cities: [], township: '', detail: '' };
-              
-              for (const item of parse51Data.data) {
-                if (item.label === 'province') {
-                  parts.province = item.name;
-                } else if (item.label === 'city') {
-                  parts.cities.push(item.name);
-                } else if (item.label === 'township') {
-                  parts.township = item.name;
-                } else if (['road', 'poi', 'houseNumber', 'room'].includes(item.label)) {
-                  parts.detail += item.name;
-                }
-              }
-              
-              finalFormatted = (parts.province + parts.cities.join('') + parts.township + parts.detail) || rawAddress;
+              // 组装所有 name 值，确保不遗漏任何解析部分
+              finalFormatted = parse51Data.data
+                .map(item => item.name || '')
+                .filter(name => name.length > 0)
+                .join('') || rawAddress;
             } else {
               finalFormatted = rawAddress;
             }
