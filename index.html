@@ -196,21 +196,25 @@
     
     /* Mobile Responsive */
     @media (max-width: 768px) {
-      body { padding: 8px; }
-      .container { gap: 8px; }
+      body { padding: 8px; overflow: auto; }
+      html, body { height: auto; overflow: auto; }
+      .container { height: auto; gap: 8px; }
       .header h1 { font-size: 16px; }
       .header .sub { display: none; }
       
-      .main { flex-direction: column; height: auto; overflow-y: auto; }
-      .col-input, .col-result, .col-map { width: 100%; flex-shrink: 1; }
+      .main { flex-direction: column; height: auto; overflow: visible; }
+      .col-input, .col-result, .col-map { width: 100% !important; flex-shrink: 0; min-width: 0; }
       .col-input { min-height: auto; }
-      .col-result { max-height: 400px; }
-      .col-map { height: 400px; }
+      .col-result { max-height: none; overflow: visible; }
+      .col-map { height: 350px; min-height: 350px; }
       
       .method-selector { flex-wrap: wrap; }
       .method-btn { flex: 1 1 45%; margin-bottom: 4px; }
       
       .info-grid { grid-template-columns: 1fr; }
+      
+      #input-address { min-height: 80px; max-height: 120px; }
+      .card { padding: 12px; }
     }
   </style>
 </head>
