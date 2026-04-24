@@ -42,12 +42,17 @@
     <div id="qr-container"><div class="loading">加载中...</div></div>
     <div id="error-msg" class="error" style="display:none;"></div>
     <div class="hint">仅限企业内部员工使用</div>
-    <a href="/" class="back-link">返回首页</a>
+    <a id="back-link" class="back-link" href="/">返回首页</a>
   </div>
 
   <script>
-    const redirect = new URLSearchParams(location.search).get('redirect') || '/';
+    const BASE_PATH = window.location.pathname.replace(/\/login\.html(\?.*)?$/, '');
+    window.BASE_PATH = BASE_PATH;
+
+    const redirect = new URLSearchParams(location.search).get('redirect') || BASE_PATH + '/';
     let isInDingTalk = false;
+
+    document.getElementById('back-link').href = BASE_PATH + '/';
 
     function checkDingTalkEnv() {
       const ua = navigator.userAgent.toLowerCase();
@@ -68,7 +73,7 @@
           });
         });
 
-        const res = await fetch('/api/auth/dingtalk/auto', {
+        const res = await fetch(BASE_PATH + '/api/auth/dingtalk/auto', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ authCode: code })
@@ -88,7 +93,7 @@
 
     async function showQrLogin() {
       try {
-        const res = await fetch('/api/auth/dingtalk/url?redirect=' + encodeURIComponent(redirect));
+        const res = await fetch(BASE_PATH + '/api/auth/dingtalk/url?redirect=' + encodeURIComponent(redirect));
         const data = await res.json();
 
         const container = document.getElementById('qr-container');

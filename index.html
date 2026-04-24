@@ -401,17 +401,18 @@
 </head>
 <body>
   <script>
+    const BASE_PATH = window.location.pathname.replace(/(\/login\.html|\/index\.html)?(\?.*)?$/, '');
+    window.BASE_PATH = BASE_PATH;
+
     (async function() {
       try {
-        const res = await fetch('/api/auth/me');
+        const res = await fetch(BASE_PATH + '/api/auth/me');
         const data = await res.json();
         window.__currentUser = data.user;
 
         if (!data.loggedIn) {
           const current = location.pathname + location.search;
-          if (current !== '/' && current !== '/index.html') {
-            location.href = '/login.html?redirect=' + encodeURIComponent(current);
-          }
+          location.href = BASE_PATH + '/login.html?redirect=' + encodeURIComponent(current);
         }
       } catch (e) {
         console.error('获取用户信息失败:', e);
@@ -1194,8 +1195,8 @@
 
     document.getElementById('logout-btn').addEventListener('click', async function() {
       if (confirm('确定退出登录？')) {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        location.href = '/login.html';
+        await fetch(BASE_PATH + '/api/auth/logout', { method: 'POST' });
+        location.href = BASE_PATH + '/login.html';
       }
     });
 
