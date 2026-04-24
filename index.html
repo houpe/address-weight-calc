@@ -795,7 +795,7 @@
             content:`<div style="width:26px;height:26px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);position:relative;cursor:pointer;">${abbrev}<div style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid ${color};"></div></div>`,
             offset:new AMap.Pixel(-13,-13)});
           marker.setMap(mapInstance); mapMarkers.push(marker);
-          const info=new AMap.InfoWindow({content:`<div style="padding:6px;font-size:12px;line-height:1.7"><strong>${SOURCE_LABELS[s.source]||s.source}</strong><br><span style="color:#94a3b8">${p.lng}, ${p.lat}</span><br>权重:${(s.weightRatio*100).toFixed(1)}% 距质心:${s.dist.toFixed(1)}m</div>`,offset:new AMap.Pixel(0,-13)});
+          const info=new AMap.InfoWindow({content:`<div style="padding:6px;font-size:12px;line-height:1.7;color:#334155"><strong>${SOURCE_LABELS[s.source]||s.source}</strong><br><span style="color:#475569">${p.lng}, ${p.lat}</span><br>权重:${(s.weightRatio*100).toFixed(1)}% 距质心:${s.dist.toFixed(1)}m</div>`,offset:new AMap.Pixel(0,-13)});
           marker.on('click',()=>info.open(mapInstance,[p.lng,p.lat]));
         }
       }
