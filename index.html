@@ -400,10 +400,34 @@
   </style>
 </head>
 <body>
+  <script>
+    (async function() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        window.__currentUser = data.user;
+
+        if (!data.loggedIn) {
+          const current = location.pathname + location.search;
+          if (current !== '/' && current !== '/index.html') {
+            location.href = '/login.html?redirect=' + encodeURIComponent(current);
+          }
+        }
+      } catch (e) {
+        console.error('获取用户信息失败:', e);
+      }
+    })();
+  </script>
+
   <div class="container">
     <div class="header">
       <h1>地址坐标可靠度计算器</h1>
       <span class="sub">多源坐标融合 · 加权质心 · 综合置信度</span>
+      <div id="user-info" style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <span id="user-name" style="font-size:12px;color:var(--text-dim);"></span>
+        <img id="user-avatar" style="width:28px;height:28px;border-radius:50%;display:none;" />
+        <button id="logout-btn" style="display:none;padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:11px;cursor:pointer;">退出</button>
+      </div>
     </div>
 
     <div class="main">
@@ -1154,6 +1178,28 @@
 
     loadDefault();
     setTimeout(refreshHistory, 100);
+
+    function renderUserInfo() {
+      const user = window.__currentUser;
+      if (user) {
+        document.getElementById('user-name').textContent = user.name;
+        const avatar = document.getElementById('user-avatar');
+        if (user.avatar) {
+          avatar.src = user.avatar;
+          avatar.style.display = 'block';
+        }
+        document.getElementById('logout-btn').style.display = 'block';
+      }
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', async function() {
+      if (confirm('确定退出登录？')) {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        location.href = '/login.html';
+      }
+    });
+
+    setTimeout(renderUserInfo, 100);
   </script>
 </body>
 </html>

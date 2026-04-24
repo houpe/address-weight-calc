@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 地址坐标可靠度计算器</title>
+  <script src="https://g.alicdn.com/dingding/h5-dingtalk-login/0.21.0/ddlogin.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --border: #475569;
+      --text: #f1f5f9; --text-dim: #94a3b8; --accent: #38bdf8;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'SF Pro', 'PingFang SC', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .login-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 32px; width: 360px;
+      text-align: center;
+    }
+    .logo { font-size: 32px; margin-bottom: 8px; }
+    h1 { font-size: 18px; margin-bottom: 4px; }
+    .subtitle { font-size: 12px; color: var(--text-dim); margin-bottom: 24px; }
+    #qr-container { margin: 20px 0; min-height: 200px; }
+    .loading { color: var(--text-dim); font-size: 13px; }
+    .error { color: #f87171; font-size: 13px; margin-top: 16px; }
+    .hint { font-size: 11px; color: var(--text-dim); margin-top: 16px; }
+    .back-link {
+      display: block; margin-top: 16px; color: var(--accent);
+      text-decoration: none; font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">📍</div>
+    <h1>地址坐标可靠度计算器</h1>
+    <div class="subtitle">请使用钉钉扫码登录</div>
+    <div id="qr-container"><div class="loading">加载中...</div></div>
+    <div id="error-msg" class="error" style="display:none;"></div>
+    <div class="hint">仅限企业内部员工使用</div>
+    <a href="/" class="back-link">返回首页</a>
+  </div>
+
+  <script>
+    const redirect = new URLSearchParams(location.search).get('redirect') || '/';
+    let isInDingTalk = false;
+
+    function checkDingTalkEnv() {
+      const ua = navigator.userAgent.toLowerCase();
+      return ua.includes('dingtalk');
+    }
+
+    async function tryAutoLogin() {
+      try {
+        const dt = window.dt || window.dingtalk || {};
+        if (!dt.runtime || !dt.runtime.permission) {
+          throw new Error('钉钉环境不可用');
+        }
+
+        const code = await new Promise((resolve, reject) => {
+          dt.runtime.permission.requestAuthCode({
+            onSuccess: res => resolve(res.code),
+            onFail: err => reject(err)
+          });
+        });
+
+        const res = await fetch('/api/auth/dingtalk/auto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ authCode: code })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          location.href = redirect;
+        } else {
+          throw new Error(data.error);
+        }
+      } catch (e) {
+        console.error('免登失败:', e);
+        showQrLogin();
+      }
+    }
+
+    async function showQrLogin() {
+      try {
+        const res = await fetch('/api/auth/dingtalk/url?redirect=' + encodeURIComponent(redirect));
+        const data = await res.json();
+
+        const container = document.getElementById('qr-container');
+        container.innerHTML = '';
+
+        const url = new URL(data.url);
+        const login = new DDLogin({
+          id: 'qr-container',
+          goto: url.searchParams.get('redirect_uri'),
+          style: 'border:none;background-color:#1e293b;',
+          href: 'data:text/css;base64,' + btoa(`
+            .login-container { background: transparent; }
+            .login-title { display: none; }
+          `)
+        });
+      } catch (e) {
+        document.getElementById('error-msg').textContent = '加载登录二维码失败: ' + e.message;
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    }
+
+    async function init() {
+      isInDingTalk = checkDingTalkEnv();
+
+      if (isInDingTalk) {
+        const script = document.createElement('script');
+        script.src = 'https://g.alicdn.com/dingding/dingtalk-jsapi/2.10.3/dingtalk.open.js';
+        script.onload = tryAutoLogin;
+        script.onerror = showQrLogin;
+        document.body.appendChild(script);
+      } else {
+        showQrLogin();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

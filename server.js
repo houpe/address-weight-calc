@@ -6,6 +6,9 @@ const path = require('path');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
+const session = require('express-session');
+const dingtalk = require('./dingtalk');
+
 const db = new Database(path.join(__dirname, 'cache.db'));
 db.exec(`CREATE TABLE IF NOT EXISTS parse_cache (
   address TEXT PRIMARY KEY,
@@ -13,12 +16,58 @@ db.exec(`CREATE TABLE IF NOT EXISTS parse_cache (
   parse_data TEXT,
   created_at INTEGER DEFAULT (strftime('%s','now'))
 )`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ding_user_id TEXT UNIQUE NOT NULL,
+  name TEXT,
+  avatar TEXT,
+  unionid TEXT,
+  is_admin INTEGER DEFAULT 0,
+  created_at INTEGER DEFAULT (strftime('%s','now'))
+)`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS login_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  login_type TEXT,
+  ip TEXT,
+  user_agent TEXT,
+  created_at INTEGER DEFAULT (strftime('%s','now'))
+)`);
+
 db.pragma('journal_mode = WAL');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-prod',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  }
+}));
 app.use(express.static(path.join(__dirname)));
+
+function requireAuth(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ error: '未登录' });
+  }
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ error: '未登录' });
+  }
+  if (!req.session.user.isAdmin) {
+    return res.status(403).json({ error: '无权限' });
+  }
+  next();
+}
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
@@ -43,18 +92,13 @@ app.post('/api/cache/set', (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/cache/clear', (req, res) => {
-  db.exec('DELETE FROM parse_cache');
-  res.json({ ok: true });
-});
-
 app.get('/api/cache/stats', (req, res) => {
   const count = db.prepare('SELECT COUNT(*) as cnt FROM parse_cache').get();
   const size = db.prepare("SELECT (page_count - freelist_count) * page_size as bytes FROM pragma_page_count(), pragma_freelist_count(), pragma_page_size()").get();
   res.json({ count: count.cnt, size: Math.round(size.bytes / 1024) + 'KB' });
 });
 
-app.post('/api/cache/clear', (req, res) => {
+app.post('/api/cache/clear', requireAdmin, (req, res) => {
   db.exec('DELETE FROM parse_cache');
   res.json({ ok: true });
 });
@@ -370,6 +414,124 @@ app.post('/api/parse', async (req, res) => {
   } catch (e) { results.group_parse = { error: e.message }; }
 
   res.json({ formatted, parsers: results });
+});
+
+const loginStates = new Map();
+
+app.get('/api/auth/dingtalk/url', (req, res) => {
+  const state = crypto.randomBytes(16).toString('hex');
+  const redirect = req.query.redirect || '/';
+  loginStates.set(state, { redirect, created: Date.now() });
+
+  setTimeout(() => loginStates.delete(state), 5 * 60 * 1000);
+
+  const host = req.get('host');
+  const protocol = req.protocol;
+  const callbackUrl = `${protocol}://${host}/api/auth/dingtalk/callback`;
+  const url = dingtalk.getQrConnectUrl(callbackUrl, state);
+
+  res.json({ url, state });
+});
+
+app.get('/api/auth/dingtalk/callback', async (req, res) => {
+  const { code, state } = req.query;
+
+  if (!code || !state) {
+    return res.status(400).send('缺少参数');
+  }
+
+  const stateData = loginStates.get(state);
+  if (!stateData) {
+    return res.status(400).send('state 已过期');
+  }
+  loginStates.delete(state);
+
+  try {
+    const userInfo = await dingtalk.getUserByCode(code);
+
+    let user = db.prepare('SELECT * FROM users WHERE ding_user_id = ?').get(userInfo.userId);
+
+    if (!user) {
+      const insert = db.prepare('INSERT INTO users (ding_user_id, name, avatar, unionid) VALUES (?, ?, ?, ?)');
+      insert.run(userInfo.userId, userInfo.name, userInfo.avatar, userInfo.unionid);
+      user = db.prepare('SELECT * FROM users WHERE ding_user_id = ?').get(userInfo.userId);
+    } else {
+      db.prepare('UPDATE users SET name = ?, avatar = ?, unionid = ? WHERE ding_user_id = ?')
+        .run(userInfo.name, userInfo.avatar, userInfo.unionid, userInfo.userId);
+    }
+
+    db.prepare('INSERT INTO login_logs (user_id, login_type, ip, user_agent) VALUES (?, ?, ?, ?)')
+      .run(user.id, 'qr', req.ip, req.get('user-agent'));
+
+    req.session.user = {
+      id: user.id,
+      dingUserId: user.ding_user_id,
+      name: user.name,
+      avatar: user.avatar,
+      isAdmin: user.is_admin === 1
+    };
+
+    res.redirect(stateData.redirect);
+  } catch (e) {
+    console.error('钉钉登录失败:', e);
+    res.status(500).send('登录失败: ' + e.message);
+  }
+});
+
+app.post('/api/auth/dingtalk/auto', async (req, res) => {
+  const { authCode } = req.body;
+
+  if (!authCode) {
+    return res.status(400).json({ error: '缺少 authCode' });
+  }
+
+  try {
+    const userInfo = await dingtalk.getUserByAuthCode(authCode);
+
+    let user = db.prepare('SELECT * FROM users WHERE ding_user_id = ?').get(userInfo.userId);
+
+    if (!user) {
+      const insert = db.prepare('INSERT INTO users (ding_user_id, name, avatar, unionid) VALUES (?, ?, ?, ?)');
+      insert.run(userInfo.userId, userInfo.name, userInfo.avatar, userInfo.unionid);
+      user = db.prepare('SELECT * FROM users WHERE ding_user_id = ?').get(userInfo.userId);
+    } else {
+      db.prepare('UPDATE users SET name = ?, avatar = ?, unionid = ? WHERE ding_user_id = ?')
+        .run(userInfo.name, userInfo.avatar, userInfo.unionid, userInfo.userId);
+    }
+
+    db.prepare('INSERT INTO login_logs (user_id, login_type, ip, user_agent) VALUES (?, ?, ?, ?)')
+      .run(user.id, 'auto', req.ip, req.get('user-agent'));
+
+    req.session.user = {
+      id: user.id,
+      dingUserId: user.ding_user_id,
+      name: user.name,
+      avatar: user.avatar,
+      isAdmin: user.is_admin === 1
+    };
+
+    res.json({ success: true, user: req.session.user });
+  } catch (e) {
+    console.error('钉钉免登失败:', e);
+    res.status(500).json({ error: '登录失败: ' + e.message });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  if (req.session.user) {
+    res.json({ loggedIn: true, user: req.session.user });
+  } else {
+    res.json({ loggedIn: false, user: null });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).json({ error: '退出失败' });
+    }
+    res.json({ success: true });
+  });
 });
 
 const PORT = process.env.PORT || 3001;
