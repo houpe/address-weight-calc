@@ -23,7 +23,9 @@
     .header .sub { font-size: 12px; color: var(--text-dim); }
     .main { display: flex; gap: 12px; flex: 1; min-height: 0; }
     .col-input { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
-    .col-result { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+    .col-right { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+    .col-result { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+    .col-detail { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .col-map { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
     .card {
       background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
@@ -190,9 +192,60 @@
     }
     .map-toggle:hover { border-color: var(--accent); color: var(--text); }
     .map-toggle.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-    .map-container { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .map-container { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative; }
     .map-container.hidden { display: none; }
     .address-mode { display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0; }
+    
+    /* WMS Layer Control */
+    .wms-layer-control {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      min-width: 160px;
+    }
+    .wms-layer-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .wms-layer-item:hover {
+      background: var(--surface2);
+    }
+    .wms-color-box {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      flex-shrink: 0;
+    }
+    .wms-layer-item span {
+      font-size: 13px;
+      color: var(--text);
+      flex: 1;
+      font-weight: 500;
+    }
+    .wms-checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
     
     /* Mobile Responsive */
     @media screen and (max-width: 768px) {
@@ -204,15 +257,14 @@
       .main { flex-direction: column !important; height: auto !important; overflow: visible !important; }
       
       /* Mobile order: Input -> Map -> Result -> Detail */
-      .col-input { order: 1; width: 100% !important; flex: none !important; }
-      .col-map { order: 2; width: 100% !important; flex: none !important; height: 280px !important; min-height: 280px !important; }
-      .col-result { order: 3; width: 100% !important; flex: none !important; }
-      .col-detail { order: 4; width: 100% !important; flex: 1 1 auto !important; min-height: 200px !important; }
+      .col-input { order: 1 !important; width: 100% !important; flex: none !important; }
+      .col-map { order: 2 !important; width: 100% !important; flex: none !important; height: 300px !important; min-height: 300px !important; }
+      .col-right { order: 3 !important; width: 100% !important; flex: none !important; }
       
       /* Map controls hidden on mobile */
       .col-map .map-header > div:last-child { display: none !important; }
       .col-map .map-header { padding: 8px 12px; }
-      #map { height: calc(100% - 40px) !important; min-height: 240px !important; }
+      #map { height: calc(100% - 40px) !important; min-height: 260px !important; }
       
       /* Result card should show all content */
       .result-card { flex: 0 0 auto !important; }
@@ -282,6 +334,26 @@
         </div>
       </div>
 
+      <div class="col-right">
+        <div class="col-result">
+          <div class="card result-card" style="flex:0 0 auto;">
+            <div class="card-title">计算结果</div>
+            <div id="result-content">
+              <div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-detail">
+          <div class="card detail-card" style="flex:1; min-height: 0;">
+            <div class="card-title">来源明细</div>
+            <div id="source-detail" style="overflow-y:auto; flex:1; min-height:0;">
+              <div class="empty-state"><div class="text">暂无数据</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="col-map">
         <div class="card map-container" id="map-section">
           <div class="map-header">
@@ -300,23 +372,22 @@
             </div>
           </div>
           <div id="map"></div>
-        </div>
-      </div>
-
-      <div class="col-result">
-        <div class="card result-card" style="flex:0 0 auto;">
-          <div class="card-title">计算结果</div>
-          <div id="result-content">
-            <div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-detail">
-        <div class="card detail-card" style="flex:1; min-height: 0;">
-          <div class="card-title">来源明细</div>
-          <div id="source-detail" style="overflow-y:auto; flex:1; min-height:0;">
-            <div class="empty-state"><div class="text">暂无数据</div></div>
+          <div class="wms-layer-control" id="wms-layer-control">
+            <div class="wms-layer-item" onclick="toggleWMSLayer('zy')">
+              <div class="wms-color-box" style="background:#f44336"></div>
+              <span>自营覆盖</span>
+              <input type="checkbox" id="check-zy" class="wms-checkbox" checked>
+            </div>
+            <div class="wms-layer-item" onclick="toggleWMSLayer('sf')">
+              <div class="wms-color-box" style="background:#9e9e9e"></div>
+              <span>三方覆盖</span>
+              <input type="checkbox" id="check-sf" class="wms-checkbox" checked>
+            </div>
+            <div class="wms-layer-item" onclick="toggleWMSLayer('xj')">
+              <div class="wms-color-box" style="background:#ffeb3b"></div>
+              <span>小件围栏</span>
+              <input type="checkbox" id="check-xj" class="wms-checkbox">
+            </div>
           </div>
         </div>
       </div>
@@ -344,6 +415,7 @@
     }
 
     let mapInstance = null, mapMarkers = [], mapVisible = true, amapLoaded = false;
+    let wmsLayers = { zy: null, sf: null, xj: null };
     let lastResult = null, lastParsers = [], lastFormatted = '', lastRawData = {};
     let formattedEdited = false;
 
@@ -591,6 +663,35 @@
         console.log('initMap: container size:', container.clientWidth, container.clientHeight);
         mapInstance=new AMap.Map('map',{zoom:4,center:[104,35],features:['bg','road','building','point']});
         console.log('initMap: map created, valid:', !!mapInstance);
+        // 加载WMS插件
+        AMap.plugin(['AMap.TileLayer.WMS'], function() {
+          const wmsLayersConfig = [
+            { id: 'zy', name: 'query_fence_map_zy', label: '自营覆盖' },
+            { id: 'sf', name: 'query_fence_sf', label: '三方覆盖' },
+            { id: 'xj', name: '小件围栏', label: '小件围栏' }
+          ];
+          wmsLayersConfig.forEach(cfg => {
+            wmsLayers[cfg.id] = new AMap.TileLayer.WMS({
+              url: 'https://gateway.ztocc.com/geoserver/ztocc/wms',
+              blend: true,
+              opacity: 0.7,
+              tileSize: 256,
+              params: {
+                'LAYERS': 'ztocc:' + cfg.name,
+                'STYLES': '',
+                'FORMAT': 'image/png',
+                'TRANSPARENT': true,
+                'VERSION': '1.1.1',
+                'SRS': 'EPSG:4326'
+              }
+            });
+            // 默认显示自营和三方覆盖图层
+            if (cfg.id !== 'xj') {
+              wmsLayers[cfg.id].setMap(mapInstance);
+            }
+          });
+          console.log('WMS layers initialized', wmsLayers);
+        });
       }catch(e){
         console.error('initMap error:', e);
         document.getElementById('map').innerHTML=`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;">&#9888; ${e.message}</div>`;
@@ -732,6 +833,20 @@
       btn.textContent=mapVisible?'隐藏':'显示';
       btn.classList.toggle('active',mapVisible);
       if(mapVisible&&mapInstance) setTimeout(()=>mapInstance.resize(),100);
+    }
+
+    function toggleWMSLayer(layerId) {
+      if (!wmsLayers[layerId]) return;
+      const checkbox = document.getElementById('check-' + layerId);
+      if (!checkbox) return;
+      
+      if (checkbox.checked) {
+        wmsLayers[layerId].setMap(null);
+        checkbox.checked = false;
+      } else {
+        wmsLayers[layerId].setMap(mapInstance);
+        checkbox.checked = true;
+      }
     }
 
     async function clearCache() {
