@@ -48,6 +48,17 @@ app.post('/api/cache/clear', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/cache/stats', (req, res) => {
+  const count = db.prepare('SELECT COUNT(*) as cnt FROM parse_cache').get();
+  const size = db.prepare("SELECT (page_count - freelist_count) * page_size as bytes FROM pragma_page_count(), pragma_freelist_count(), pragma_page_size()").get();
+  res.json({ count: count.cnt, size: Math.round(size.bytes / 1024) + 'KB' });
+});
+
+app.post('/api/cache/clear', (req, res) => {
+  db.exec('DELETE FROM parse_cache');
+  res.json({ ok: true });
+});
+
 const ZT_API_BASE = 'https://zmap-openapi.gw.zt-express.com';
 const AMAP_KEYS = (process.env.AMAP_KEYS || '2196ccf544e7a8c8f82cff1e40be3992,113c46ebcb860653b696ca01ec5ad151').split(',');
 const BAIDU_AK = process.env.BAIDU_AK || 'HIM3QorvOGqquDRvLSZ1npMH9lplzcLK';
@@ -335,7 +346,9 @@ app.post('/api/parse', async (req, res) => {
             poiTag: r.poiTag || '',
             poiCode: r.poiCode || '',
             source: r.source || '',
-            hasRectified: r.hasRectified || false
+            hasRectified: r.hasRectified || false,
+            bd09_lat: bdLat,
+            bd09_lng: bdLng
           }
         };
       }

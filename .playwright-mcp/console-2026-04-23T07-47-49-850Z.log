@@ -9,3 +9,6 @@
 [   17628ms] [LOG] renderMap called with 5 parsers @ https://houpe.top/gis/:625
 [   17628ms] [LOG] renderMap: map ready, drawing markers... @ https://houpe.top/gis/:631
 [   17628ms] [LOG] drawMapMarkers: removing old markers, adding new... @ https://houpe.top/gis/:638
+[   75667ms] [LOG] renderMap called with 5 parsers @ https://houpe.top/gis/:625
+[   75667ms] [LOG] renderMap: map ready, drawing markers... @ https://houpe.top/gis/:631
+[   75668ms] [LOG] drawMapMarkers: removing old markers, adding new... @ https://houpe.top/gis/:638

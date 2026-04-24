@@ -62,6 +62,72 @@
     }
     .hint { font-size: 10px; color: var(--text-dim); line-height: 1.5; }
     .hint code { background: var(--surface2); padding: 1px 4px; border-radius: 3px; font-size: 9px; }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
+    #formatted-display {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--accent); padding: 6px 8px;
+      font-size: 11px; outline: none; margin-bottom: 4px;
+    }
+    #formatted-display:focus { border-color: var(--accent); }
     .params-row { display: flex; gap: 8px; }
     .param-item { flex: 1; }
     .param-item label { display: block; font-size: 10px; color: var(--text-dim); margin-bottom: 2px; }
@@ -171,7 +237,15 @@
           <div class="address-mode" id="address-mode">
             <div class="input-area">
               <div class="card-title">输入地址</div>
-              <textarea id="input-address" style="padding-right:60px;min-height:40px;max-height:60px">广东省深圳市宝安区鹤州路38号</textarea>
+              <div style="position:relative">
+                <textarea id="input-address" style="padding-right:60px;min-height:40px;max-height:60px">广东省深圳市宝安区鹤州路38号</textarea>
+                <button class="btn btn-primary" style="position:absolute;top:0;right:0;padding:8px 10px;font-size:11px;height:100%" onclick="calculate()">计算</button>
+              </div>
+              <div style="font-size:11px;color:var(--text-dim);margin-top:6px">
+                解析地址：
+                <label style="margin-right:12px;cursor:pointer"><input type="radio" name="parse-mode" value="raw" checked style="vertical-align:middle"> 原地址</label>
+                <label style="cursor:pointer"><input type="radio" name="parse-mode" value="formatted" style="vertical-align:middle"> 分词地址</label>
+              </div>
             </div>
             <div class="card" style="padding:8px 10px;">
               <div class="card-title" style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
@@ -181,8 +255,8 @@
               <div id="address-history" style="max-height:180px;overflow-y:auto"></div>
             </div>
             <div class="card-title">格式化地址</div>
-            <div id="formatted-display">-</div>
-            <div class="hint">点击计算后自动调用 API 解析</div>
+            <input id="formatted-display" type="text" placeholder="标准化后自动生成" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--accent);padding:6px 8px;font-size:11px;outline:none;margin-bottom:4px">
+            <div class="hint">支持编辑，修改后直接解析</div>
           </div>
 
           <div class="params-row">
@@ -204,7 +278,7 @@
       </div>
 
       <div class="col-result">
-        <div class="card" style="flex:1;">
+        <div class="card" style="flex:0.5;">
           <div class="card-title">计算结果</div>
           <div id="result-content">
             <div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>
@@ -223,9 +297,14 @@
           <div class="map-header">
             <div class="card-title">坐标分布地图</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <input id="map-coord-input" type="text" placeholder="lat,lng 如:32.069,112.152" style="width:180px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;font-size:11px;outline:none">
+              <input id="map-coord-input" type="text" placeholder="lat,lng 如:32.069,112.152" style="width:160px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;font-size:11px;outline:none">
+              <select id="map-coord-sys" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:11px;outline:none">
+                <option value="gcj02">GCJ02</option>
+                <option value="bd09">BD09</option>
+              </select>
               <button class="map-toggle" onclick="addMapMarker()" style="padding:4px 8px;font-size:10px">标记</button>
               <button class="map-toggle" id="btn-ranging" onclick="toggleRanging()" style="padding:4px 8px;font-size:10px">测距</button>
+              <button class="map-toggle" onclick="clearCache()" style="padding:4px 8px;font-size:10px">清缓存</button>
               <button class="map-toggle active" id="map-toggle" onclick="toggleMap()">隐藏</button>
               <span id="map-coord-msg" style="font-size:10px;color:var(--green);min-width:60px"></span>
             </div>
@@ -260,6 +339,7 @@
     let currentMethod = '5coord';
     let mapInstance = null, mapMarkers = [], mapVisible = true, amapLoaded = false;
     let lastResult = null, lastParsers = [], lastFormatted = '', lastRawData = {};
+    let formattedEdited = false;
 
     const METHOD_CONFIG = {
       '5coord': {
@@ -275,7 +355,7 @@
       'address': {
         label: '地址解析（6源）',
         sources: ['zt_pro','amap_poi','baidu_poi','amap_geo','baidu_geo','group_parse'],
-        weights: {'group_parse':5,'zt_pro':1,'amap_geo':1,'baidu_geo':1,'amap_poi':1,'baidu_poi':1}
+        weights: {'group_parse':45,'zt_pro':1,'amap_geo':1,'baidu_geo':1,'amap_poi':1,'baidu_poi':1}
       }
     };
 
@@ -296,6 +376,13 @@
     const SOURCE_LABELS = {'zt_pro':'中通PRO','amap_poi':'高德POI','baidu_poi':'百度POI','tian_poi':'天地图POI','amap_geo':'高德GEO','baidu_geo':'百度GEO','tian_geo':'天地图GEO','manual':'手选','baidu_agg':'百度聚合','group_parse':'集团解析'};
 
     function toRadians(d) { return d * Math.PI / 180; }
+    function bd09togcj02(bdLon, bdLat) {
+      const x_pi = 3.14159265358979324 * 3000.0 / 180.0;
+      const x = bdLon - 0.0065, y = bdLat - 0.006;
+      const z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * x_pi);
+      const theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * x_pi);
+      return [z * Math.cos(theta), z * Math.sin(theta)];
+    }
     function haversineDistance(lat1, lng1, lat2, lng2) {
       const R = 6371000, phi1 = toRadians(lat1), phi2 = toRadians(lat2);
       const dPhi = toRadians(lat2-lat1), dLambda = toRadians(lng2-lng1);
@@ -403,16 +490,23 @@
           </svg></div>
           <div class="score-verdict ${verdict.cls}">${verdict.text}</div>
           <div class="info-grid">
-            <div class="info-item"><div class="label">加权偏差</div><div class="value">${result.deviation} m</div></div>
+            <div class="info-item"><div class="label">平均偏差</div><div class="value">${result.deviation} m</div></div>
             <div class="info-item"><div class="label">有效/剔除</div><div class="value">${result.validSources.length} / ${result.dropped.length}</div></div>
           </div>
-          <div class="center-loc">质心: ${result.centerLng}, ${result.centerLat}</div>
+          <div class="center-loc">集团: ${result.centerLng}, ${result.centerLat}</div>
         </div>`;
-      let html=`<table class="source-table"><thead><tr><th>来源</th><th>权重</th><th>距质心</th><th>状态</th></tr></thead><tbody>`;
-      for(const s of result.validSources) {
+      let html=`<table class="source-table"><thead><tr><th>来源</th><th>权重</th><th>距集团</th><th>状态</th></tr></thead><tbody>`;
+      const groupParser = lastParsers.find(p => p.source === 'group_parse');
+      const sorted = [...result.validSources].sort((a,b) => b.weightRatio - a.weightRatio);
+      for(const s of sorted) {
         const p = lastParsers.find(x => x.source === s.source);
+        let distToGroup = '-';
+        if (groupParser && groupParser.lat && p && p.lat) {
+          const d = haversineDistance(p.lat, p.lng, groupParser.lat, groupParser.lng);
+          distToGroup = d.toFixed(1) + 'm';
+        }
         const clickAttr = p && p.lat ? `onclick="zoomToSource(${p.lng},${p.lat},'${SOURCE_LABELS[s.source]||s.source}')" style="cursor:pointer"` : '';
-        html+=`<tr ${clickAttr}><td>${SOURCE_LABELS[s.source]||s.source}</td><td>${(s.weightRatio*100).toFixed(1)}%</td><td>${s.dist.toFixed(1)}m</td><td><span class="tag tag-valid">有效</span></td></tr>`;
+        html+=`<tr ${clickAttr}><td>${SOURCE_LABELS[s.source]||s.source}</td><td>${(s.weightRatio*100).toFixed(1)}%</td><td>${distToGroup}</td><td><span class="tag tag-valid">有效</span></td></tr>`;
       }
       for(const s of result.dropped) {
         const p = lastParsers.find(x => x.source === s);
@@ -436,7 +530,8 @@
             <div>AOI标签: ${group.raw?.aoiTag || '-'}</div>
             <div>POI标签: ${group.raw?.poiTag || '-'}</div>
             <div>来源: ${group.raw?.source || '-'}  已修正: ${group.raw?.hasRectified ? '是' : '否'}</div>
-            <div>坐标: ${group.lng}, ${group.lat}</div>
+            <div>GCJ02坐标: ${group.lng}, ${group.lat} <span style="color:var(--text-dim);font-size:9px">(计算使用)</span></div>
+            <div>BD09坐标: ${group.raw?.bd09_lng || '-'}, ${group.raw?.bd09_lat || '-'} <span style="color:var(--text-dim);font-size:9px">(原始)</span></div>
             <div style="margin-top:4px"><a href="javascript:void(0)" onclick="toggleRaw('group_raw')" style="color:var(--accent);font-size:10px;text-decoration:none">更多 ▾</a></div>
             <div id="group_raw" style="display:none;margin-top:6px"><pre style="background:var(--surface2);padding:8px;border-radius:4px;overflow:auto;font-size:9px;color:var(--text-dim);max-height:200px">${JSON.stringify(group.raw, null, 2)}</pre></div>
           </div>`;
@@ -528,9 +623,9 @@
     }
 
     function zoomToSource(lng, lat, label) {
-      if (!mapInstance) { initMap().then(() => { mapInstance.setCenter([lng, lat]); mapInstance.setZoom(18); }); return; }
-      mapInstance.setCenter([lng, lat]);
-      mapInstance.setZoom(18);
+      if (!mapInstance) { initMap().then(() => { mapInstance.setZoom(12); setTimeout(() => mapInstance.setCenter([lng, lat]), 400); }); return; }
+      mapInstance.setZoom(12);
+      setTimeout(() => mapInstance.setCenter([lng, lat]), 400);
     }
 
     function toggleRaw(id) {
@@ -564,7 +659,7 @@
         container.style.width='100%';
         container.style.height='100%';
         console.log('initMap: container size:', container.clientWidth, container.clientHeight);
-        mapInstance=new AMap.Map('map',{zoom:14,center:[121.48,31.22],features:['bg','road','building','point']});
+        mapInstance=new AMap.Map('map',{zoom:4,center:[104,35],features:['bg','road','building','point']});
         console.log('initMap: map created, valid:', !!mapInstance);
       }catch(e){
         console.error('initMap error:', e);
@@ -574,37 +669,57 @@
 
     function addMapMarker() {
       const input = document.getElementById('map-coord-input').value.trim();
+      const coordSys = document.getElementById('map-coord-sys').value;
       const msgEl = document.getElementById('map-coord-msg');
       if (!input) { msgEl.textContent=''; msgEl.style.color='var(--red)'; return; }
       
-      const parts = input.split(/[,，\s]+/).filter(Boolean);
-      if (parts.length < 2) { msgEl.textContent='格式错误'; msgEl.style.color='var(--red)'; setTimeout(()=>msgEl.textContent='',2000); return; }
+      let lat, lng;
       
-      const clean = v => parseFloat(v.replace(/^(lat|lng|lon|lat=|lng=|lon=):?/i, ''));
-      const lat = clean(parts[0]);
-      const lng = clean(parts[1]);
+      // Try JSON format: "lat": "29.83", "lng": "113.48"
+      const jsonMatch = input.match(/["']lat["']\s*:\s*["']?([\d.\-]+)["']?\s*,?\s*["']lng["']\s*:\s*["']?([\d.\-]+)["']?/i);
+      if (jsonMatch) {
+        lat = parseFloat(jsonMatch[1]);
+        lng = parseFloat(jsonMatch[2]);
+      } else {
+        // Fallback to simple format: lat,lng or lat lng
+        const parts = input.split(/[,，\s]+/).filter(Boolean);
+        if (parts.length < 2) { msgEl.textContent='格式错误'; msgEl.style.color='var(--red)'; setTimeout(()=>msgEl.textContent='',2000); return; }
+        const clean = v => parseFloat(v.replace(/^(lat|lng|lon|lat=|lng=|lon=):?/i, ''));
+        lat = clean(parts[0]);
+        lng = clean(parts[1]);
+      }
+      
       if (isNaN(lat) || isNaN(lng)) { msgEl.textContent='坐标无效'; msgEl.style.color='var(--red)'; setTimeout(()=>msgEl.textContent='',2000); return; }
+      
+      // Convert BD09 to GCJ02 if needed
+      let finalLat = lat, finalLng = lng;
+      if (coordSys === 'bd09') {
+        const converted = bd09togcj02(lng, lat);
+        finalLng = converted[0];
+        finalLat = converted[1];
+      }
       
       if (!mapInstance) {
         initMap().then(() => {
-          drawSingleMarker(lng, lat);
-          mapInstance.setCenter([lng, lat]);
+          drawSingleMarker(finalLng, finalLat);
+          mapInstance.setCenter([finalLng, finalLat]);
           mapInstance.setZoom(15);
         });
       } else {
-        drawSingleMarker(lng, lat);
-        mapInstance.setCenter([lng, lat]);
+        drawSingleMarker(finalLng, finalLat);
+        mapInstance.setCenter([finalLng, finalLat]);
         mapInstance.setZoom(15);
       }
-      msgEl.textContent='已标记 ✓'; msgEl.style.color='var(--green)';
+      const coordLabel = coordSys === 'bd09' ? 'BD09→GCJ02' : 'GCJ02';
+      msgEl.textContent=`已标记(${coordLabel}) ✓`; msgEl.style.color='var(--green)';
       setTimeout(()=>msgEl.textContent='',3000);
     }
 
     function drawSingleMarker(lng, lat) {
       const marker = new AMap.Marker({
         position: [lng, lat],
-        content: `<div style="width:32px;height:32px;border-radius:50%;background:#ec4899;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);cursor:pointer;">&#9733;</div>`,
-        offset: new AMap.Pixel(-16, -16),
+        content: `<div style="font-size:28px;line-height:1;cursor:pointer;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));">📌</div>`,
+        offset: new AMap.Pixel(-14, -28),
         zIndex: 50
       });
       marker.setMap(mapInstance);
@@ -669,7 +784,15 @@
           offset:new AMap.Pixel(-9,-9),zIndex:100});
         cm.setMap(mapInstance); mapMarkers.push(cm);
       }
-      if(allPoints.length>0) mapInstance.setFitView(mapMarkers,false,[30,30,30,30]);
+      if(allPoints.length>0){
+        const gp=parsers.find(p=>p.source==='group_parse');
+        if(gp&&gp.lat&&gp.lng){
+          mapInstance.setCenter([gp.lng,gp.lat]);
+          mapInstance.setZoom(16);
+        } else {
+          mapInstance.setFitView(mapMarkers,false,[30,30,30,30]);
+        }
+      }
     }
 
     function toggleMap() {
@@ -681,51 +804,68 @@
       if(mapVisible&&mapInstance) setTimeout(()=>mapInstance.resize(),100);
     }
 
+    async function clearCache() {
+      if (!confirm('确定要清除解析缓存吗？\n(仅清除API响应缓存，不影响历史记录)')) return;
+      try {
+        await fetch(`${API_BASE}/api/cache/clear`, { method: 'POST' });
+        const msgEl = document.getElementById('map-coord-msg');
+        msgEl.textContent='已清除 ✓'; msgEl.style.color='var(--green)';
+        setTimeout(()=>msgEl.textContent='',2000);
+      } catch (e) {
+        alert('清除失败: ' + e.message);
+      }
+    }
+
     async function calculate() {
       const tau=parseFloat(document.getElementById('tau').value)||500;
-      const outlier=parseFloat(document.getElementById('outlier').value)||5000;
+      const outlier=parseFloat(document.getElementById('outlier').value)||50000;
       const btn=document.getElementById('btn-calc');
 
       if (currentMode === 'address') {
-        const address = document.getElementById('input-address').value.trim();
-        if (!address) { alert('请输入地址'); return; }
+        const rawAddress = document.getElementById('input-address').value.trim();
+        if (!rawAddress) { alert('请输入地址'); return; }
+        
+        const parseMode = document.querySelector('input[name="parse-mode"]:checked').value;
+        const formattedInput = document.getElementById('formatted-display');
+        
         btn.disabled = true; btn.textContent = '解析中';
         document.getElementById('result-content').innerHTML = '<div class="loading">正在解析地址</div>';
         document.getElementById('source-detail').innerHTML = '';
 
         try {
-          // Check cache first
-          let stdData, parseData;
-          const cached = await getCached(address);
-          if (cached.found) {
-            stdData = cached.std;
-            parseData = cached.parse;
-          } else {
+          let parseData, finalFormatted;
+
+          if (parseMode === 'formatted') {
             // Step 1: Standardize
             const stdResp = await fetch(`${API_BASE}/api/standardize`, {
               method: 'POST', headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({ address })
+              body: JSON.stringify({ address: rawAddress })
             });
-            stdData = await stdResp.json();
-            const formatted = stdData.formatted;
-
-            // Step 2-4: Parse with 3 sources
-            const parseResp = await fetch(`${API_BASE}/api/parse`, {
-              method: 'POST', headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({ formatted })
-            });
-            parseData = await parseResp.json();
-
-            // Store in cache
-            setCache(address, stdData, parseData);
+            const stdData = await stdResp.json();
+            finalFormatted = stdData.formatted;
+            formattedInput.value = finalFormatted;
+            formattedInput.disabled = true;
+          } else {
+            finalFormatted = rawAddress;
+            formattedInput.value = rawAddress;
+            formattedInput.disabled = false;
           }
 
-          const formatted = stdData.formatted;
-          lastFormatted = formatted;
-          document.getElementById('formatted-display').textContent = formatted;
+          const cached = await getCached(finalFormatted);
+          if (cached.found) {
+            parseData = cached.parse;
+          } else {
+            const parseResp = await fetch(`${API_BASE}/api/parse`, {
+              method: 'POST', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ formatted: finalFormatted })
+            });
+            parseData = await parseResp.json();
+            setCache(finalFormatted, { formatted: finalFormatted }, parseData);
+          }
+
+          lastFormatted = finalFormatted;
           lastRawData = parseData.parsers;
 
-          // Build parsers array
           const parsers = [];
           for (const [source, data] of Object.entries(parseData.parsers)) {
             if (data.lat && data.lng && data.lat !== 0 && data.lng !== 0) {
@@ -737,7 +877,7 @@
           lastParsers = parsers;
           renderResult(result);
           renderMap(result, parsers);
-          saveAddressHistory(address);
+          saveAddressHistory(rawAddress);
         } catch (e) {
           document.getElementById('result-content').innerHTML = `<div class="empty-state"><div class="icon">&#9888;</div><div class="text">解析失败: ${e.message}</div></div>`;
         }
@@ -745,7 +885,7 @@
       } else {
         lastFormatted = '';
         lastRawData = {};
-        document.getElementById('formatted-display').textContent = '-';
+        document.getElementById('formatted-display').value = '-';
         const text = document.getElementById('input-coords').value;
         const parsers = parseInput(text);
         const result = calculateReliability(parsers, tau, outlier);
@@ -841,6 +981,9 @@
 
     document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter')calculate();});
     window.addEventListener('resize',()=>{if(mapVisible&&mapInstance)mapInstance.resize();});
+    document.getElementById('formatted-display').addEventListener('input', function() {
+      formattedEdited = true;
+    });
 
     setMode('address');
     setMethod('5coord');

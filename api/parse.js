@@ -241,9 +241,21 @@ module.exports = async (req, res) => {
           lng: gcjLng,
           raw: {
             address: r.address || '',
-            addressGeneralizeWithBuilding: r.addressGeneralizeWithBuilding || '',
+            poiName: r.poiName || '',
+            structProvince: r.structProvince || '',
+            structCity: r.structCity || '',
+            structDistrict: r.structDistrict || '',
+            structTown: r.structTown || '',
+            structRoad: r.structRoad?.parsedInfo || '',
+            structRoadNo: r.structRoadNo?.originInfo || '',
+            aoiName: r.aoiName || '',
+            aoiTag: r.aoiTag || '',
+            poiTag: r.poiTag || '',
+            poiCode: r.poiCode || '',
             source: r.source || '',
-            hasRectified: r.hasRectified || false
+            hasRectified: r.hasRectified || false,
+            bd09_lat: bdLat,
+            bd09_lng: bdLng
           }
         };
       }
