@@ -224,9 +224,12 @@
         margin-bottom: 12px;
       }
       
-      /* Specific map height */
-      .col-map { height: 350px !important; min-height: 350px !important; }
-      .col-result { overflow: visible !important; }
+      /* Map container height and controls */
+      .col-map { height: 400px !important; min-height: 400px !important; }
+      .col-map .map-header { flex-wrap: wrap; gap: 4px; padding: 6px 10px; }
+      .col-map .map-header > div:last-child { display: none !important; } /* Hide map controls on mobile */
+      .col-map .map-header::after { content: '📍 计算后显示坐标'; display: block; font-size: 10px; color: var(--text-dim); width: 100%; text-align: center; }
+      #map { height: calc(100% - 35px) !important; min-height: 365px !important; }
       
       /* Method selector wrapping */
       .method-selector { flex-wrap: wrap; }
@@ -297,21 +300,6 @@
         </div>
       </div>
 
-      <div class="col-result">
-        <div class="card" style="flex:0.5;">
-          <div class="card-title">计算结果</div>
-          <div id="result-content">
-            <div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>
-          </div>
-        </div>
-        <div class="card" style="flex:1; min-height: 0;">
-          <div class="card-title">来源明细</div>
-          <div id="source-detail" style="overflow-y:auto; flex:1; min-height:0;">
-            <div class="empty-state"><div class="text">暂无数据</div></div>
-          </div>
-        </div>
-      </div>
-
       <div class="col-map">
         <div class="card map-container" id="map-section">
           <div class="map-header">
@@ -330,6 +318,21 @@
             </div>
           </div>
           <div id="map"></div>
+        </div>
+      </div>
+
+      <div class="col-result">
+        <div class="card" style="flex:0.5;">
+          <div class="card-title">计算结果</div>
+          <div id="result-content">
+            <div class="empty-state"><div class="icon">&#128202;</div><div class="text">点击计算</div></div>
+          </div>
+        </div>
+        <div class="card" style="flex:1; min-height: 0;">
+          <div class="card-title">来源明细</div>
+          <div id="source-detail" style="overflow-y:auto; flex:1; min-height:0;">
+            <div class="empty-state"><div class="text">暂无数据</div></div>
+          </div>
         </div>
       </div>
     </div>

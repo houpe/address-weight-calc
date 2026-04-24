@@ -1,0 +1,54 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "地址坐标可靠度计算器" [level=1] [ref=e4]
+    - generic [ref=e5]: 多源坐标融合 · 加权质心 · 综合置信度
+  - generic [ref=e6]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: 输入地址
+          - generic [ref=e12]:
+            - textbox [ref=e13]: 广东省深圳市宝安区鹤州路38号
+            - button "计算" [ref=e14] [cursor=pointer]
+          - generic [ref=e15]:
+            - text: 解析地址：
+            - generic [ref=e16] [cursor=pointer]:
+              - radio "原地址" [checked] [ref=e17]
+              - text: 原地址
+            - generic [ref=e18] [cursor=pointer]:
+              - radio "分词地址" [ref=e19]
+              - text: 分词地址
+          - generic [ref=e20]: 格式化地址
+          - textbox "标准化后自动生成" [ref=e21]
+          - generic [ref=e22]: 支持编辑，修改后直接解析
+        - generic [ref=e24]:
+          - text: 历史记录
+          - button "清空" [ref=e25] [cursor=pointer]
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]: tau (米)
+          - spinbutton [ref=e29]: "500"
+        - generic [ref=e30]:
+          - generic [ref=e31]: 离群阈值 (米)
+          - spinbutton [ref=e32]: "50000"
+      - button "计算" [ref=e34] [cursor=pointer]
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: 计算结果
+        - generic [ref=e39]:
+          - generic [ref=e40]: 📊
+          - generic [ref=e41]: 点击计算
+      - generic [ref=e42]:
+        - generic [ref=e43]: 来源明细
+        - generic [ref=e46]: 暂无数据
+    - generic [ref=e48]:
+      - generic [ref=e49]: 坐标分布地图
+      - generic [ref=e50]:
+        - textbox "lat,lng 如:32.069,112.152" [ref=e51]
+        - combobox [ref=e52]:
+          - option "GCJ02" [selected]
+          - option "BD09"
+        - button "标记" [ref=e53] [cursor=pointer]
+        - button "测距" [ref=e54] [cursor=pointer]
+        - button "清缓存" [ref=e55] [cursor=pointer]
+        - button "隐藏" [ref=e56] [cursor=pointer]
