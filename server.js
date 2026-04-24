@@ -39,8 +39,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS login_logs (
 db.pragma('journal_mode = WAL');
 
 const app = express();
-const BASE_PATH = process.env.BASE_PATH || '';
-
 app.use(cors());
 app.use(express.json());
 app.use(session({
@@ -49,12 +47,10 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    sameSite: 'lax',
-    path: BASE_PATH || '/'
+    maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
-app.use(BASE_PATH, express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname)));
 
 function requireAuth(req, res, next) {
   if (!req.session.user) {
@@ -73,18 +69,11 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-app.get(BASE_PATH + '/', (req, res) => {
-  if (!req.session.user) {
-    return res.redirect(BASE_PATH + '/login.html?redirect=' + encodeURIComponent(req.originalUrl));
-  }
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get(BASE_PATH + '/login.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'login.html'));
-});
-
-app.get(BASE_PATH + '/api/cache/get', (req, res) => {
+app.get('/api/cache/get', (req, res) => {
   const { address } = req.query;
   if (!address) return res.json({ found: false });
   const row = db.prepare('SELECT std_data, parse_data FROM parse_cache WHERE address = ?').get(address);
@@ -95,7 +84,7 @@ app.get(BASE_PATH + '/api/cache/get', (req, res) => {
   }
 });
 
-app.post(BASE_PATH + '/api/cache/set', (req, res) => {
+app.post('/api/cache/set', (req, res) => {
   const { address, std, parse } = req.body;
   if (!address || !std || !parse) return res.status(400).json({ error: '参数不完整' });
   const stmt = db.prepare('INSERT OR REPLACE INTO parse_cache (address, std_data, parse_data) VALUES (?, ?, ?)');
@@ -103,13 +92,13 @@ app.post(BASE_PATH + '/api/cache/set', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get(BASE_PATH + '/api/cache/stats', (req, res) => {
+app.get('/api/cache/stats', (req, res) => {
   const count = db.prepare('SELECT COUNT(*) as cnt FROM parse_cache').get();
   const size = db.prepare("SELECT (page_count - freelist_count) * page_size as bytes FROM pragma_page_count(), pragma_freelist_count(), pragma_page_size()").get();
   res.json({ count: count.cnt, size: Math.round(size.bytes / 1024) + 'KB' });
 });
 
-app.post(BASE_PATH + '/api/cache/clear', requireAdmin, (req, res) => {
+app.post('/api/cache/clear', requireAdmin, (req, res) => {
   db.exec('DELETE FROM parse_cache');
   res.json({ ok: true });
 });
@@ -180,7 +169,7 @@ async function amapGeocode(address) {
   return { status: '0', info: 'ALL_KEYS_EXHAUSTED' };
 }
 
-app.post(BASE_PATH + '/api/standardize', async (req, res) => {
+app.post('/api/standardize', async (req, res) => {
   const { address } = req.body;
   if (!address) return res.status(400).json({ error: '地址不能为空' });
 
@@ -214,7 +203,7 @@ app.post(BASE_PATH + '/api/standardize', async (req, res) => {
   }
 });
 
-app.get(BASE_PATH + '/api/parse51', async (req, res) => {
+app.get('/api/parse51', async (req, res) => {
   const { address } = req.query;
   if (!address) return res.status(400).json({ error: '地址不能为空' });
   try {
@@ -228,7 +217,7 @@ app.get(BASE_PATH + '/api/parse51', async (req, res) => {
   }
 });
 
-app.post(BASE_PATH + '/api/parse', async (req, res) => {
+app.post('/api/parse', async (req, res) => {
   const { formatted, city } = req.body;
   if (!formatted) return res.status(400).json({ error: '格式化地址不能为空' });
 
@@ -429,7 +418,7 @@ app.post(BASE_PATH + '/api/parse', async (req, res) => {
 
 const loginStates = new Map();
 
-app.get(BASE_PATH + '/api/auth/dingtalk/url', (req, res) => {
+app.get('/api/auth/dingtalk/url', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
   const redirect = req.query.redirect || '/';
   loginStates.set(state, { redirect, created: Date.now() });
@@ -437,14 +426,14 @@ app.get(BASE_PATH + '/api/auth/dingtalk/url', (req, res) => {
   setTimeout(() => loginStates.delete(state), 5 * 60 * 1000);
 
   const host = req.get('host');
-  const protocol = req.protocol;
-  const callbackUrl = `${protocol}://${host}/api/auth/dingtalk/callback`;
+  const protocol = req.get('x-forwarded-proto') || req.protocol;
+  const callbackUrl = `${protocol}://${host}/gis/api/auth/dingtalk/callback`;
   const url = dingtalk.getQrConnectUrl(callbackUrl, state);
 
   res.json({ url, state });
 });
 
-app.get(BASE_PATH + '/api/auth/dingtalk/callback', async (req, res) => {
+app.get('/api/auth/dingtalk/callback', async (req, res) => {
   const { code, state } = req.query;
 
   if (!code || !state) {
@@ -489,7 +478,7 @@ app.get(BASE_PATH + '/api/auth/dingtalk/callback', async (req, res) => {
   }
 });
 
-app.post(BASE_PATH + '/api/auth/dingtalk/auto', async (req, res) => {
+app.post('/api/auth/dingtalk/auto', async (req, res) => {
   const { authCode } = req.body;
 
   if (!authCode) {
@@ -528,7 +517,7 @@ app.post(BASE_PATH + '/api/auth/dingtalk/auto', async (req, res) => {
   }
 });
 
-app.get(BASE_PATH + '/api/auth/me', (req, res) => {
+app.get('/api/auth/me', (req, res) => {
   if (req.session.user) {
     res.json({ loggedIn: true, user: req.session.user });
   } else {
@@ -536,7 +525,7 @@ app.get(BASE_PATH + '/api/auth/me', (req, res) => {
   }
 });
 
-app.post(BASE_PATH + '/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) {
       return res.status(500).json({ error: '退出失败' });
