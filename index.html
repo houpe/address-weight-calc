@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wi6jirw7m4");
+</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>地址坐标可靠度计算器</title>
@@ -379,13 +386,11 @@
       
       /* Mobile order: Input -> Map -> Result -> Detail */
       .col-input { order: 1 !important; width: 100% !important; flex: none !important; }
-      .col-map { order: 2 !important; width: 100% !important; flex: none !important; height: 300px !important; min-height: 300px !important; }
-      .col-right { order: 3 !important; width: 100% !important; flex: none !important; }
-      
-      /* Map controls hidden on mobile */
-      .col-map .map-header > div:last-child { display: none !important; }
-      .col-map .map-header { padding: 8px 12px; }
-      #map { height: calc(100% - 40px) !important; min-height: 260px !important; }
+      .col-map { order: 2 !important; width: 100% !important; flex: none !important; height: 100vh !important; min-height: 100vh !important; padding: 0 !important; }
+      .col-map .card { padding: 0 !important; border-radius: 0 !important; height: 100% !important; }
+      .col-map .map-container { height: 100% !important; }
+      .col-map .map-header { border-radius: 0 !important; }
+      #map { height: calc(100vh - 40px) !important; min-height: calc(100vh - 40px) !important; }
       .wms-layer-control {
         left: 8px !important;
         right: 8px !important;
